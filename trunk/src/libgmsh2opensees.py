@@ -14,8 +14,8 @@ Created on Thu Oct 21 18:48:53 2010
 
 #Importar modulos
 from scipy import *
-import matplotlib.pyplot as plt
-from tools import *
+#import matplotlib.pyplot as plt
+from libtools import *
 #from Tkinter import *
 #from tkFileDialog import askopenfilename
 #from tkFileDialog import asksaveasfilename
@@ -33,6 +33,9 @@ from tools import *
 # Estructura basica
 # ------------------------------------------------------------------------------
 class Elem:
+    pass
+
+class Stru:
     pass
 
 class Model:
@@ -138,6 +141,9 @@ class Model:
         model.success = 1
         model.sourceFile = fname
         
+        if model.success:
+            model.formElemTypes()
+        
         return model
         
         # ------------------------------------------------------------------------------
@@ -237,4 +243,19 @@ class Model:
         
     def genGroupNumber(self,number):
         return 'GRP{0:03.0f}'.format(double(number))
+        
+    def formElemTypes(self):
+        self.elemTypes = {}
+        for elem in self.elemDict:
+            if self.elemTypes.has_key(elem.eltype):
+                self.elemTypes[elem.eltype] .Nelem += 1
+                self.elemTypes[elem.eltype] .elemList.append(elem.elnum)
+            else:
+                self.elemTypes[elem.eltype] = Stru()
+                self.elemTypes[elem.eltype].Nelem = 1
+                self.elemTypes[elem.eltype] .elemList = [elem.elnum]
+                pass
+            pass
+                
+        
         
