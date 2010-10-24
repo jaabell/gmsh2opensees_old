@@ -4,10 +4,10 @@ Created on Sat Oct 23 07:53:48 2010
 
 @author: jose
 """
-from tabs import *
+from libtabs import *
 from tkFileDialog import askopenfilename
 from tkFileDialog import asksaveasfilename
-from gmsh2opensees import *
+from libgmsh2opensees import *
 
 class App:
     def createWidgets(self):
@@ -41,9 +41,9 @@ class App:
         # ----------------------------------------------------------------------
         self.tabMaster = GenTabMaster(self.master)
         
-        self.tabGeometria = FrameGeom(self.tabMaster)
-        self.tabMaster.add(self.tabGeometria, text='Geometry', state='disabled')
-        self.tabGeometria.createWidgets()
+        self.tabSummary = FrameSummary(self.tabMaster)
+        self.tabMaster.add(self.tabSummary, text='Model Summary', state='disabled')
+        self.tabSummary.createWidgets()
         
         
         self.tabAssign = FrameAssign(self.tabMaster)
@@ -89,14 +89,14 @@ class App:
         
         if self.model.success == 1:
             print 'Success in loading GMSH file!'
-            #self.tabMaster.tab(self.tabGeometria, state ="normal")
+            #self.tabMaster.tab(self.tabSummary, state ="normal")
             self.tabMaster.tab(0,state="normal")
             self.tabMaster.tab(1,state="normal")
             self.tabMaster.tab(2,state="normal")
             self.tabMaster.tab(3,state="normal")
             self.saveGeomButt['state'] = "normal"
             
-            self.tabGeometria.updateWidgets(self.model)
+            self.tabSummary.updateWidgets(self.model)
             self.tabAssign.updateWidgets(self.model)
             
         else:
