@@ -16,6 +16,8 @@ Created on Thu Oct 21 18:48:53 2010
 from scipy import *
 #import matplotlib.pyplot as plt
 from libtools import *
+import pickle
+
 #from Tkinter import *
 #from tkFileDialog import askopenfilename
 #from tkFileDialog import asksaveasfilename
@@ -67,7 +69,7 @@ class Model:
         model.physgrp = []
         for line in fid:
             
-            #Detectar campo
+            #Detectar campoevent
             if line[0] == '$':
                 if line.find('Nodes') > 0:
                     inNodes = 1
@@ -143,44 +145,13 @@ class Model:
         
         if model.success:
             model.formElemTypes()
+            model.assigns = {}
+            model.recorders = []
+            model.analysisOptions = []
+            model.materials = []
         
         return model
         
-        # ------------------------------------------------------------------------------
-        # Graficar Malla de elementos Quad4n
-        # ------------------------------------------------------------------------------
-        #plt.close('all')
-        #
-        #xdata = array([])
-        #ydata = array([])
-        #mx = array([])
-        #my = array([])
-        #
-        #nQuad4n = 0
-        #nTruss = 0
-        #nBeam = 0
-        #nHex8n = 0
-        #s = []
-        #plt.figure()
-        #for elem in self.elemDict:
-        #    if elem.eltype == 3:
-        #        nQuad4n += 1
-        #        xn = self.XYZ[elem.nodes[[0,1,2,3,0]] - 1,0]
-        #        yn = self.XYZ[elem.nodes[[0,1,2,3,0]] - 1,1]
-        #        xdata = hstack((xdata, array([nan]), xn.squeeze()))
-        #        ydata = hstack((ydata, array([nan]), yn.squeeze()))
-        #        mx = hstack((mx, mean(xn)))
-        #        my = hstack((my, mean(yn)))
-        #        s.append('{0}'.format(elem.elnum))
-        #plt.plot(xdata,ydata,'k')
-        #plt.xlabel('X')
-        #plt.ylabel('Y')
-        #plt.axis('equal')
-        
-        # ------------------------------------------------------------------------------
-        # Escritura de Archivo de Destino
-        # ------------------------------------------------------------------------------
-
     def writeModelToOpsFile(self,outfname):
         
         fid = open(outfname,'w')
@@ -256,6 +227,124 @@ class Model:
                 self.elemTypes[elem.eltype] .elemList = [elem.elnum]
                 pass
             pass
-                
+    
+    def saveDatabase(self,fname):
+        fid = open(fname,mode = 'wb')
+        databaseWrite = pickle.Pickler(fid)
+        databaseWrite.dump(self)
+        fid.close()
+    
+    @staticmethod
+    def loadDatabase(fname):
+        fid = open(fname,mode = 'rb')
+        databaseRead = pickle.Unpickler(fid)
+        model = databaseRead.load()
+        fid.close()
         
+        return model
+
+
+
+class OpenSEESassign:
+    #Defines an OpenSees command object class. This class generates aids in writing the TCL
+    # to assign properties to elements in groups. 
+    def __init__(self, instruction, objectList, applyTo='nodes'):
+        self.instruction = instruction
+        self.applyTo = applyTo.lower()
+        self.objectList = objectList
+        self.autoCodeString = '-- Code generated automagically by gmsh2opensees -- \n\n'
+        
+        print 'Added new OpenSEESassing \n'
+        print 'instruction: ' + instruction + '\n'
+        print 'applyTo:     ' + applyTo + '\n'
+        print 'objectList:  ' + objectList + '\n\n'
+        
+    def __call__(self):
+        return self.genCmdString()
+        
+    def genCmdString(self):
+        if self.applyTo == 'nodes':
+            return self.getNodeTCLCommand()
+            pass
+        elif self.applyTo == 'elements':
+            return self.getElemTCLCommand()
+            pass
+        else:
+            pass
+    
+    def getNodeTCLCommand(self,model):
+        if self.instruction.find('$ele') == -1:
+            pass
+        else:
+            str = self.autoCodeString
+            str += 'for nod [list '
+            for nod in getObjectIds(model):
+                str += '{0} '.format(nod)
+            str += '] { \n'
+            str += self.instruction+'\n'
+            str += '} \n \n'
+            pass
+        
+    def getElemTCLCommand(self):
+        if self.instruction.find('$nod') == -1:
+            pass
+        else:
+            str = self.autoCodeString
+            str += 'for ele [list '
+            for ele in getObjectIds(model):
+                str += '{0} '.format(ele)
+            str += '] { \n'
+            str += self.instruction+'\n'
+            str += '} \n \n'
+            pass
+        pass 
+        
+    def getObjectIds(self, model):
+        spList = self.objectList.splic(sep = '+')
+        objIds = []
+        for obj in spList:
+            type = obj[:3]
+            idnum = obj[3:]
+            if type == 'grp':
+                if self.applyTo == 'elements':
+                    elemIds = model.elemPG[int(idnum)]
+                    objIds = objIds+elemIds
+                elif self.applyTo == 'nodes':
+                    nodeIds = model.nodePG[int(idnum)]
+                    objIds = objIds+nodeIds
+            elif  type == 'nod':
+                pass
+            elif type == 'ele':
+                pass
+            pass
+            return objIds
+            
+    def promoteCmd(self, cmdName):
+        newAssigns = {}
+        cmdList = self.assigns.keys()
+        idx = cmdList.index(cmdName)
+        if idx > 0:
+            aux = cmdList[idx-1]
+            cmdList[idx - 1] = cmdName
+            cmdList[idx] = aux
+            for cmd in cmdList:
+                newAssigns[cmd] = model.assigns[cmd]
+            model.assigns = newAssigns
+        pass
+        
+    def demoteCmd(self, cmdName):
+        newAssigns = {}
+        cmdList = self.assigns.keys()
+        idx = cmdList.index(cmdName)
+        if idx < len(cmdList)-1:
+            aux = cmdList[idx+1]
+            cmdList[idx + 1] = cmdName
+            cmdList[idx] = aux
+            for cmd in cmdList:
+                newAssigns[cmd] = model.assigns[cmd]
+            model.assigns = newAssigns
+        pass
+        
+    def loadDatabase(self,fname):
+        pass
         
