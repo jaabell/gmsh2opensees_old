@@ -26,12 +26,13 @@ class App:
         self.loadGmshMeshButt['text'] = 'Load .msh file'
         self.loadGmshMeshButt.pack(side = 'left', expand = 1)
         
-        self.loadProjectButt = Button(self.topMenu)
+        self.loadProjectButt = Button(self.topMenu, command = self.loadProject)
         self.loadProjectButt['text'] = 'Load Project'
         self.loadProjectButt.pack(side = 'left', expand = 1)
         
-        self.saveProjectButt = Button(self.topMenu)
+        self.saveProjectButt = Button(self.topMenu, command = self.saveProject)
         self.saveProjectButt['text'] = 'Save Project'
+        self.saveProjectButt['state'] = 'disabled'
         self.saveProjectButt.pack(side = 'left', expand = 1)
         
         self.topMenu.pack(expand = 1)
@@ -56,8 +57,8 @@ class App:
         self.tabAnalysis = FrameAnalysis(self.tabMaster)
         self.tabMaster.add(self.tabAnalysis, text='Analysis Setup', state='disabled')
         
-        self.tabMaster['width'] = 800
-        self.tabMaster['height'] = 600
+            #        self.tabMaster['width'] = 800
+            #        self.tabMaster['height'] = 600
         self.tabMaster.pack()
         
         # ----------------------------------------------------------------------
@@ -94,11 +95,12 @@ class App:
             self.tabMaster.tab(1,state="normal")
             self.tabMaster.tab(2,state="normal")
             self.tabMaster.tab(3,state="normal")
+            self.tabMaster.select(0)
             self.saveGeomButt['state'] = "normal"
             
             self.tabSummary.updateWidgets(self.model)
             self.tabAssign.updateWidgets(self.model)
-            
+            self.saveProjectButt['state'] = 'normal'
         else:
             pass
         
@@ -115,8 +117,25 @@ class App:
         pass
     def loadProject(self):
         print 'loadProject'
+        self.fname = askopenfilename(parent=self.master, title="gmsh2OpenSEES:  Seleccionar el archivo de destino", initialdir=".", filetypes=[("gmsh2opensees Binary Model Representation","*.bmr")])
+        self.model = Model.loadDatabase(self.fname)
+        print 'Success in loading GMSH file!'
+        #self.tabMaster.tab(self.tabSummary, state ="normal")
+        self.tabMaster.tab(0,state="normal")
+        self.tabMaster.tab(1,state="normal")
+        self.tabMaster.tab(2,state="normal")
+        self.tabMaster.tab(3,state="normal")
+        self.tabMaster.select(0)
+        self.saveGeomButt['state'] = "normal"
+        
+        self.tabSummary.updateWidgets(self.model)
+        self.tabAssign.updateWidgets(self.model)
+        self.saveProjectButt['state'] = 'normal'
+        
         pass
     def saveProject(self):
+        fname = asksaveasfilename(parent=self.master,title="gmsh2OpenSEES: Seleccionar el archivo de destino", filetypes=[("gmsh2opensees Binary Model Representation","*.bmr")], initialfile=self.fname[:-4]+'.bmr')
+        self.model.saveDatabase(fname)
         print 'saveProject'
         pass
     

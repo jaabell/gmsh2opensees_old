@@ -14,28 +14,21 @@ source amplitopo3.ops
 foreach nod $nodeGRP012 {
 	fix $nod 1 1
 }
+
 #Empotrar borde izquierdo
-# fix 1 1 1 
-# fix 7 1 1
-# fix 190 1 1
-# fix 191 1 1
-# fix 192 1 1
-# fix 193 1 1
-# fix 194 1 1
-# fix 195 1 1
-# fix 196 1 1
 
 #Carga en nodo 4
 
 timeSeries Constant 1 -factor 1
 
 pattern Plain 1 1 {
-	load 4 0. -10.
+	foreach nod $nodeGRP013 {
+		load $nod 0. -1.
+        }
 }
 
 
 #Configurar recorder de nodos
-set nodos [getNodeTags]
 recorder Node -file output.txt -nodeRange 1 2697 -dof 1 2 disp;
 
 #Opciones de analisis
