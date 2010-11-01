@@ -149,6 +149,7 @@ class Model:
             model.recorders = []
             model.analysisOptions = []
             model.materials = []
+            model.cmdList = []
         
         return model
         
@@ -230,7 +231,7 @@ class Model:
     
     def saveDatabase(self,fname):
         fid = open(fname,mode = 'wb')
-        databaseWrite = pickle.Pickler(fid)
+        databaseWrite = pickle.Pickler(fid, protocol=2)
         databaseWrite.dump(self)
         fid.close()
     
@@ -242,7 +243,38 @@ class Model:
         fid.close()
         
         return model
-
+        
+    def addCommand(self,name,cmdObject):
+        ncmds = len(self.cmdList)
+        self.assigns[name] = cmdObject
+        self.cmdList.append(name)
+        pass
+        
+    def deleteCommand(self,name):
+        self.assigns.pop(name)
+        self.cmdList.remove(name) 
+        pass
+        
+    def promoteCmd(self, cmdName):
+        cmdList = self.cmdList
+        idx = cmdList.index(cmdName)
+        #print 'idx = {0}\n'.format(idx)
+        if idx > 0:
+            aux = cmdList[idx-1]
+            cmdList[idx - 1] = cmdName
+            cmdList[idx] = aux
+            self.cmdList = cmdList
+        pass
+        
+    def demoteCmd(self, cmdName):
+        cmdList = self.cmdList
+        idx = cmdList.index(cmdName)
+        if idx < len(cmdList)-1:
+            aux = cmdList[idx+1]
+            cmdList[idx + 1] = cmdName
+            cmdList[idx] = aux
+            self.cmdList = cmdList
+        pass
 
 
 class OpenSEESassign:
@@ -318,33 +350,5 @@ class OpenSEESassign:
                 pass
             pass
             return objIds
-            
-    def promoteCmd(self, cmdName):
-        newAssigns = {}
-        cmdList = self.assigns.keys()
-        idx = cmdList.index(cmdName)
-        if idx > 0:
-            aux = cmdList[idx-1]
-            cmdList[idx - 1] = cmdName
-            cmdList[idx] = aux
-            for cmd in cmdList:
-                newAssigns[cmd] = model.assigns[cmd]
-            model.assigns = newAssigns
-        pass
-        
-    def demoteCmd(self, cmdName):
-        newAssigns = {}
-        cmdList = self.assigns.keys()
-        idx = cmdList.index(cmdName)
-        if idx < len(cmdList)-1:
-            aux = cmdList[idx+1]
-            cmdList[idx + 1] = cmdName
-            cmdList[idx] = aux
-            for cmd in cmdList:
-                newAssigns[cmd] = model.assigns[cmd]
-            model.assigns = newAssigns
-        pass
-        
-    def loadDatabase(self,fname):
-        pass
+
         

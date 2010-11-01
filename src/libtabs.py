@@ -154,6 +154,7 @@ class FrameAssign(Frame):
         self.scrollCmds = Scrollbar(self,command = self.cmdNavigator.yview,orient = VERTICAL)
         self.scrollCmds.grid(column=1,row = 3,sticky = NSEW)
         self.cmdNavigator['yscrollcommand'] = self.scrollCmds.set
+        self.cmdNavigator.bind('<Double-1>',self.viewCommand)
         
         self.cmdNavFrame = Frame(self)
         self.cmdNavFrame.grid(column = 2, row = 3)
@@ -217,6 +218,14 @@ class FrameAssign(Frame):
             i += 1
         
         for type in model.elemTypes.keys():
+            exElem = model.elemTypes[type].elemList[0]
+            idThisType = self.modelNavigator.insert(self.rootEltype,'end',text='Type '+str(type)+ ' ({0} Nodes)'.format(len(model.elemDict[exElem-1].nodes)),tags=('element','addEnabled'),values='ety'+str(type))
+            for ele in model.elemTypes[type].elemList:
+                idThisEle = self.modelNavigator.insert(idThisType,'end',text='Element {0}'.format(ele),values='ele{0}'.format(ele),tags=('element','addEnabled'))
+                
+                #Nodes in element in group loop (add model nodes)
+                for nod in model.elemDict[ele-1].nodes:
+                    self.modelNavigator.insert(idThisEle, 'end',text='Node {0}'.format(nod),values='nod{0}'.format(nod),tags=('node','addEnabled'))
             pass
                
         
@@ -272,8 +281,8 @@ class FrameAssign(Frame):
         pass 
     
     def commandAdded(self,cmdObject,name):
-        self.model.assigns[name] = cmdObject
-        self.cmdList = StringVar(value = self.model.assigns.keys())
+        self.model.addCommand(name, cmdObject)
+        self.cmdList = StringVar(value = self.model.cmdList)
         self.updateCmdList()
     
     def disableSelection(self,event):
@@ -282,28 +291,52 @@ class FrameAssign(Frame):
         
     def updateCmdList(self):
         self.cmdNavigator.delete(0,'end')
-        for item in self.model.assigns.keys():
+        for item in self.model.cmdList:
             self.cmdNavigator.insert('end',item)
         pass
         
-    def deleteCmdFromList(self,name):
-        self.model.assigns.pop(name)
+    def deleteCmdFromList(self):
+        curSelect = self.cmdNavigator.curselection()
+        name = self.model.assigns.keys()[currentIndex]
+        self.model.deleteCommand(name)
         self.updateCmdList()
         pass
         
     def movCmdUpList(self):
-        currentIndex = self.cmdNavigator.curselection()
-        name = self.model.assigns.keys()[currentIndex[0]]
-        cmdList = self.model.assigns.promoteCmd(name)
-        self.updateCmdList()
+        curSelect = self.cmdNavigator.curselection()
+        if len(curSelect) > 0:
+            currentIndex = int(curSelect[0])
+            name = self.model.assigns.keys()[currentIndex]
+            self.model.promoteCmd(name)
+            self.updateCmdList()
         pass
         
     def movCmdDownList(self):
-        currentIndex = self.cmdNavigator.curselection()
-        name = self.model.assigns.keys()[currentIndex[0]]
-        cmdList = self.model.assigns.demoteCmd(name)
-        self.updateCmdList()
+        curSelect = self.cmdNavigator.curselection()
+        if len(curSelect) > 0:
+            currentIndex = int(curSelect[0])
+            name = self.model.assigns.keys()[currentIndex]
+            self.model.demoteCmd(name)
+            self.updateCmdList()
         pass
+    
+    def viewCommand(self,event):
+        curSelect = self.cmdNavigator.curselection()
+        currentIndex = int(curSelect[0])
+        name = self.model.assigns.keys()[currentIndex]
+        
+        cmdToView = self.model.assigns[name]
+        
+        cmd = cmdToView.instruction
+        objectList = cmdToView.objectList
+        applyTo = cmdToView.applyTo
+        
+        self.editCmd.modifyThisCmd(name, cmd, objectList, applyTo)
+        
+        print 'CMDName    = '+name+'\n'
+        print 'Command    = '+cmdToView.instruction+'\n'
+        print 'ApplyTo    = '+cmdToView.applyTo+'\n'
+        print 'ObjectList = '+cmdToView.objectList+'\n'
         
 
 # ------------------------------------------------------------------------------
@@ -389,21 +422,21 @@ class cmdEditBox(Labelframe):
         
         #CMDNAME
         self.cmdNameTxt = Label(self,text = 'Command Name: ')
-        self.cmdNameTxt.grid(row = 0, column = 0,sticky=EW)
+        self.cmdNameTxt.grid(row = 0, column = 0,sticky=E)
         self.cmdNameEntry = Entry(self)
         self.cmdNameEntry.delete(0,'end')
         #self.cmdNameEntry.insert(0,'CMD_{0:03.0f}'.format(float(ncmds+1)))
-        self.cmdNameEntry.grid(row = 0, column = 1)
+        self.cmdNameEntry.grid(row = 0, column = 1, sticky=W)
         
         #CMD_INSTRUCTION
         self.cmdInstructionTxt = Label(self,text = 'OpenSEES CMD:')
-        self.cmdInstructionTxt.grid(row = 1, column = 0)
+        self.cmdInstructionTxt.grid(row = 1, column = 0,sticky=E)
         self.cmdInstructionEntry = Entry(self,width=50)
         self.cmdInstructionEntry.grid(row = 1, column = 1,sticky=EW)
         
         #CMD_INSTRUCTION
         self.applyToTxt = Label(self,text = 'Apply Command To:')
-        self.applyToTxt.grid(row = 2, column = 0)
+        self.applyToTxt.grid(row = 2, column = 0,sticky=W)
         self.applyToEntryTxt = ''
         self.applyToEntry = Entry(self, textvariable = self.applyToEntryTxt)
         #self.applyToEntry.insert('')
@@ -415,41 +448,55 @@ class cmdEditBox(Labelframe):
         self.nodElemLabelFrame.grid(row=3, column=0, columnspan = 2, sticky=EW)
         
         self.assignToObjectType = StringVar()
-        self.assignNodesRadio = Radiobutton(self.nodElemLabelFrame, text='Nodes', variable=self.assignToObjectType, value='nodes')
-        self.assignElementsRadio = Radiobutton(self.nodElemLabelFrame, text='Elements', variable=self.assignToObjectType, value='elements')
+        self.elementTypesVar = StringVar()
+        
+        self.elementTypeCombo = Combobox(self.nodElemLabelFrame, textvariable =  self.elementTypesVar)
+        self.assignNodesRadio = Radiobutton(self.nodElemLabelFrame, text='Nodes', variable=self.assignToObjectType, value='nodes', command = self.disableCombo)
+        self.assignElementsRadio = Radiobutton(self.nodElemLabelFrame, text='Elements', variable=self.assignToObjectType, value='elements' , command = self.enableCombo)
+        
         
         self.assignNodesRadio.pack(side='left')
         self.assignElementsRadio.pack(side='left')
+        self.elementTypeCombo.pack(side='left')
+        
+        self.elementTypeCombo['state'] = 'disabled'
+        
+        self.assignToObjectType.set('nodes')
         
         #CMD_INSTRUCTION
         self.buttonFrame = Frame(self)
         self.buttonFrame.grid(row = 4, column = 0, columnspan = 2,sticky=EW)
         
         self.addCMDButton = Button(self.buttonFrame,text = 'Add/Modify', command = self.addThisCmd)
-        self.addCMDButton.pack(side = 'left')
-        #self.editCMDButton = Button(self.buttonFrame, text = 'Modify Cmd.', command = self.modifyThisCmd)            
-        #self.editCMDButton.pack(side = 'left')
+        self.addCMDButton.pack(side = 'left', anchor=CENTER)
         self.clearButton = Button(self.buttonFrame,text = 'Clear', command = self.clearForm)            
-        self.clearButton.pack(side = 'left')
+        self.clearButton.pack(side = 'left', anchor=CENTER)
     
     def addThisCmd(self):
         name = self.cmdNameEntry.get()
-        cmd = self.cmdInstructionEntry.get()
-        objectList = self.applyToEntry.get()
-        applyTo = self.assignToObjectType.get()
-        cmdObject = OpenSEESassign(cmd,objectList,applyTo)
         
-        for obs in self.observers:
-            obs.commandAdded(cmdObject, name)
+        if len(name) == 0:
+            messagebox.showinfo(message = 'Command must have a name')
+        else:
+            cmd = self.cmdInstructionEntry.get()
+            objectList = self.applyToEntry.get()
+            applyTo = self.assignToObjectType.get()
+            cmdObject = OpenSEESassign(cmd,objectList,applyTo)
         
-        #self.model.assigns[name] = OpenSEESassign(cmd,objectList,applyTo)
-        
-        print str(len(self.model.assigns)) + '\n'
-        print self.model.assigns.keys()
+            for obs in self.observers:
+                obs.commandAdded(cmdObject, name)
+            print str(len(self.model.assigns)) + '\n'
+            print self.model.assigns.keys()
         pass
         
-    def modifyThisCmd(self):
-        self.addThisCmd()
+    def modifyThisCmd(self,name,cmd,objectList,applyTo):
+        self.applyToEntry.delete(0,'end')
+        self.applyToEntry.insert(0,objectList)
+        self.cmdNameEntry.delete(0,'end')
+        self.cmdNameEntry.insert(0,name)
+        self.assignToObjectType.set(applyTo)
+        self.cmdInstructionEntry.delete(0,'end')
+        self.cmdInstructionEntry.insert(0,cmd)
         pass
     
     def clearForm(self):
@@ -481,11 +528,30 @@ class cmdEditBox(Labelframe):
         
     def enableWidgets(self):
         
+        
         self.cmdNameEntry['state'] = 'normal'
         self.cmdInstructionEntry['state'] = 'normal'
         self.applyToEntry['state'] = 'normal'
         self.addCMDButton['state'] = 'normal'
-        #self.editCMDButton['state'] = 'normal'
+    
+    def disableCombo(self):
+        self.elementTypeCombo.delete(0,'end')
+        self.elementTypeCombo['state'] = 'disabled'
+        pass
+        
+    def enableCombo(self):
+        self.elementTypeCombo['state'] = 'normal'
+        self.elementTypeCombo.delete(0,'end')
+        values = []
+        values.append('All')
+   
+        for type in self.model.elemTypes.keys():
+            exElem = self.model.elemTypes[type].elemList[0]
+            values.append('Type '+str(type)+ ' ({0} Nodes)'.format(len(self.model.elemDict[exElem-1].nodes)))
+            
+        self.elementTypeCombo['values'] = tuple(values)
+        self.elementTypeCombo.set('All')
+        pass
     def subscribe(self, observer):
         self.observers.append(observer)
     
