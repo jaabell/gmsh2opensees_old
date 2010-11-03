@@ -1,0 +1,80 @@
+# materials.db
+#
+# This file contains the materials command database reported on the OpenSEES website.
+# Adding a material is as easy as adding a line with the command this line.
+#
+# The '#' symbol comments a line if it is the first character in the line.
+#
+# Date of compilation: 3-Nov-2010
+# Compiled by: Jose Abell
+#
+#
+uniaxialMaterial Steel01 $matTag $Fy $E0 $b <$a1 $a2 $a3 $a4>
+uniaxialMaterial Hysteretic $matTag $s1p $e1p $s2p $e2p <$s3p $e3p> $s1n $e1n $s2n $e2n <$s3n $e3n> $pinchX $pinchY $damage1 $damage2 <$beta>
+uniaxialMaterial ReinforcingSteel $matTag $fy $fu $Es $Esh $esh $eult < -GABuck $lsr $beta $r $gama > < -DMBuck $lsr < $alpha >> < -CMFatigue $Cf $alpha $Cd > < -IsoHard <$a1 <$limit> > >
+uniaxialMaterial Concrete01 $matTag $fpc $epsc0 $fpcu $epsU
+uniaxialMaterial Concrete02 $matTag $fpc $epsc0 $fpcu $epsU $lambda $ft $Ets
+uniaxialMaterial Concrete04 $matTag $fc $ec $ecu $Ec <$fct $et> <$beta>
+uniaxialMaterial Concrete06 $matTag $fc $e0 $n $k $alpha1 $fcr $ecr $b $alpha2
+uniaxialMaterial Concrete07 $matTag $fc $ec $Ec $ft $et $xp $xn $r
+uniaxialMaterial Concrete01WithSITC $matTag $fpc $epsc0 $fpcu $epsU <$endStrainSITC>
+uniaxialMaterial ConfinedConcrete01 $tag $secType $fpc $Ec (<-epscu $epscu> OR <-gamma $gamma>) (<-nu $nu> OR <-varub> OR <-varnoub>) $L1 ($L2) ($L3) $phis $S $fyh $Es0 $haRatio $mu $phiLon <-internal $phisi $Si $fyhi $Es0i $haRatioi $mui> <-wrap $cover $Am $Sw $fuil $Es0w> <-gravel> <-silica> <-tol $tol> <-maxNumIter $maxNumIter> <-epscuLimit $epscuLimit> <-stRatio $stRatio>
+uniaxialMaterial Elastic $matTag $E <$eta>
+uniaxialMaterial ElasticPP $matTag $E $epsyP <$epsyN $eps0>
+uniaxialMaterial ElasticPPGap $matTag $E $Fy $gap <$eta> <damage>
+uniaxialMaterial ENT $matTag $E
+uniaxialMaterial Parallel $matTag $tag1 $tag2 ...
+uniaxialMaterial Series $matTag $tag1 $tag2 ...
+uniaxialMaterial Bilin $matTag $K0 $as_Plus $as_Neg $My_Plus $My_Neg $Lamda_S $Lamda_C $Lamda_A $Lamda_K $c_S $c_C $c_A $c_K $theta_p_Plus $theta_p_Neg $theta_pc_Plus $theta_pc_Neg $Res_Pos $Res_Neg $theta_u_Plus $theta_u_Neg $D_Plus $D_Neg
+uniaxialMaterial SAWS $tag $F0 $FI $DU $S0 $R1 $R2 $R3 $R4 $alph $beta
+uniaxialMaterial BarSlip $matTag $fc $fy $Es $fu $Eh $db $ld $nb $depth $height <$ancLratio> $bsFlag $type <$damage $unit>
+uniaxialMaterial Bond_SP01 $matTag $Fy $Sy $Fu $Su $b $R
+uniaxialMaterial Fatigue $matTag $tag <-E0 $E0> <-m $m> <-min $min> <-max $max>
+uniaxialMaterial Hardening $matTag $E $sigmaY $H_iso $H_kin <$eta>
+uniaxialMaterial ImpactMaterial $matTag $K1 $K2 $δy $gap
+uniaxialMaterial HyperbolicGapMaterial $matTag $Kmax $Kur $Rf $Fult $gap
+uniaxialMaterial LimitState $matTag $s1p $e1p $s2p $e2p $s3p $e3p $s1n $e1n $s2n $e2n $s3n $e3n $pinchX $pinchY
+uniaxialMaterial MinMax $matTag $otherTag <-min $minStrain> <-max $maxStrain>
+uniaxialMaterial Pinching4 $matTag $ePf1 $ePd1 $ePf2 $ePd2 $ePf3 $ePd3 $ePf4 $ePd4 <$eNf1 $eNd1 $eNf2 $eNd2 $eNf3 $eNd3 $eNf4 $eNd4> $rDispP $rForceP $uForceP <$rDispN $rForceN $uForceN > $gK1 $gK2 $gK3 $gK4 $gKLim $gD1 $gD2 $gD3 $gD4 $gDLim $gF1 $gF2 $gF3 $gF4 $gFLim $gE $dmgType
+uniaxialMaterial ECC01 $matTag $sigt0 $epst0 $sigt1 $epst1 $epst2 $sigc0 $epsc0 $epsc1 $alphaT1 $alphaT2 $alphaC $alphaCU $betaT $betaC
+uniaxialMaterial SelfCentering $matTag $k1 $k2 $sigAct $beta <$epsSlip> <$epsBear> <rBear>
+uniaxialMaterial Viscous $matTag $C $alpha
+uniaxialMaterial PySimple1 $matTag $soilType $pult $Y50 $Cd <$c>
+uniaxialMaterial TzSimple1 $matTag $tzType $tult $z50 <$c>
+uniaxialMaterial QzSimple1 $matTag $qzType $qult $Z50 <$suction $c>
+uniaxialMaterial PyLiq1 $matTag $soilType $pult $Y50 $Cd $c $pRes $solidElem1 $solidElem2.
+#PySimple1Gen $file1 $file2 $file3 $file4 $file5 <$file6>
+#TzSimple1Gen $file1 $file2 $file3 $file4 $file5 <$file6>
+nDMaterial ElasticIsotropic $matTag $E $v <$rho>
+nDMaterial J2Plasticity $matTag $K $G $sig0 $sigInf $delta $H
+nDMaterial DruckerPrager $matTag $k $G $sigmaY $rho $rhoBar $Kinf $Ko $delta1 $delta2 $H $theta
+nDMaterial PlaneStress $matTag $threeDtag
+nDMaterial PlaneStrain $matTag $threeDtag
+nDMaterial ReinforcedConcretePlaneStress matTag? rho? s1? s2? c1? c2? angle1? angle2? rou1? rou2? fpc? fy? E0? epsc0?
+nDMaterial FAReinforcedConcretePlaneStress matTag? rho? s1? s2? c1? c2? angle1? angle2? rou1? rou2? fpc? fy? E0? epsc0?
+nDMaterial RAFourSteelRCPlaneStress matTag? rho? UniaxiaMatTag1? UniaxiaMatTag2? UniaxiaMatTag3? UniaxiaMatTag4? UniaxiaMatTag5? UniaxiaMatTag6? angle1? angle2? angle3? angle4? rou1? rou2? rou3? rou4? fpc? fy? E0? epsc0?
+nDMaterial FAFourSteelRCPlaneStress matTag? rho? UniaxiaMatTag1? UniaxiaMatTag2? UniaxiaMatTag3? UniaxiaMatTag4? UniaxiaMatTag5? UniaxiaMatTag6? angle1? angle2? angle3? angle4? rou1? rou2? rou3? rou4? fpc? fy? E0? epsc0?
+nDMaterial PrestressedConcretePlaneStress matTag? rho? t1? s1? c1? c2? angle1? angle2? rou1? rou2? pstrain? fpc? fyT? fy2? E0? epsc0?
+nDMaterial FAPrestressedConcretePlaneStress matTag? rho? t1? s2? c1? c2? angle1? angle2? rou1? rou2? pstrain? fpc? fyT? fy? E0? epsc0?
+nDMaterial RAFourSteelPCPlaneStress matTag? rho? UniaxiaMatTag1? UniaxiaMatTag2? UniaxiaMatTag3? UniaxiaMatTag4? angle1? angle2? rou1? rou2? pstrain? fpc? fyT? fy? E0? epsc0?
+nDMaterial FAFourSteelPCPlaneStress matTag? rho? t1? t2? s3? s4? c1? c2? angle1? angle2? angle3? angle4? rou1? rou2? rou3? rou4? pstrain1? pstrain2? fpc? fyT? fy? E0? epsc0?
+nDMaterial FluidSolidPorousMaterial $tag $nd $soilMatTag $combinedBulkModul
+nDMaterial PressureDependMultiYield $tag $nd $rho $refShearModul $refBulkModul $frictionAng $peakShearStra $refPress $pressDependCoe $PTAng $contrac $dilat1 $dilat2 $liquefac1 $liquefac2 $liquefac3 <$noYieldSurf=20 <$r1 $Gs1 �> $e=0.6 $cs1=0.9 $cs2=0.02 $cs3=0.7 $pa=101>
+nDMaterial PressureDependMultiYield02 $tag $nd $rho $refShearModul $refBulkModul $frictionAng $peakShearStra $refPress $pressDependCoe $PTAng $contrac1 $contrac3 $dilat1 $dilat3 <$noYieldSurf=20 <$r1 $Gs1 �> $contrac2=5. $dilat2=3. $liquefac1=1. $liquefac2=0. $e=0.6 $cs1=0.9 $cs2=0.02 $cs3=0.7 $pa=101>
+nDMaterial PressureIndependMultiYield $tag $nd $rho $refShearModul $refBulkModul $cohesi $peakShearStra <$frictionAng=0. $refPress=100. $pressDependCoe=0. $noYieldSurf=20 <$r1 $Gs1 �> >
+nDMaterial Template3Dep $matTag $ElmatTag -YS $ys -PS $ps -EPS $eps <-ELS1 $el> <-ELT1 $et>
+section Elastic $secTag $E $A $Iz <$Iy $G $J>
+section Uniaxial $secTag $matTag $string
+section Fiber $secTag {Use Section Generator -- Not implemented yet}
+section Aggregator $secTag $matTag1 $dof1 $matTag2 $dof2 ....... <-section $sectionTag>
+section ElasticMembranePlateSection $secTag $E $nu $h $rho
+section Iso2spring $matTag $tol $k1 $Fyo $k2o $kvo $hb $PE <$Po>
+frictionModel Coulomb $frnTag $mu
+frictionModel VDependent $frnTag $muSlow $muFast $transRate
+frictionModel VPDependent $frnTag $muSlow $muFast0 $A $deltaMu $alpha $transRate
+#geomTransf Linear $transfTag <-jntOffset $dXi $dYi $dXj $dYj>
+#geomTransf Linear $transfTag $vecxzX $vecxzY $vecxzZ <-jntOffset $dXi $dYi $dZi $dXj $dYj $dZj>
+#geomTransf PDelta $transfTag <-jntOffset $dXi $dYi $dXj $dYj>
+#geomTransf PDelta $transfTag $vecxzX $vecxzY $vecxzZ <-jntOffset $dXi $dYi $dZi $dXj $dYj $dZj>
+#geomTransf Corotational $transfTag <-jntOffset $dXi $dYi $dXj $dYj>
+#geomTransf Corotational $transfTag $vecxzX $vecxzY $vecxzZ <-jntOffset $dXi $dYi $dZi $dXj $dYj $dZj>
