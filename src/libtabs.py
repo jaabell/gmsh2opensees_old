@@ -6,8 +6,9 @@ Created on Sat Oct 23 07:53:48 2010
 """
 from Tkinter import *
 from ttk import *
-import Tkinter as TkLib
 from libgmsh2opensees import *
+import tkMessageBox as Mes
+import tkFont as font
 
 #from Tkinter.ttk import *
 #from pyTtk import *
@@ -109,6 +110,211 @@ class FrameSummary(Frame):
         
 
 # ------------------------------------------------------------------------------
+# TAB: Materials
+# ------------------------------------------------------------------------------
+class FrameMaterials(Frame):
+    def __init__(self, parent):
+        Frame.__init__(self, parent)
+        pass
+        
+    def createWidgets(self):
+        
+        self.comboFont = font.Font(family='Helvetica', size=8)
+        
+        self.title = Label(self, text = 'Material Generator', anchor = 'center')
+        self.title.grid(row = 0, column = 0, columnspan = 4, sticky = EW)
+        
+        #Headers
+        self.materialTxt = Label(self, text = 'Material')
+        self.materialTxt.grid(row = 1, column = 0, sticky = EW)
+        self.matTypeTxt = Label(self, text = 'Type')
+        self.matTypeTxt.grid(row = 1, column = 1, sticky = EW)
+        self.matIdTxt = Label(self, text = 'Id')
+        self.matIdTxt.grid(row = 1, column = 2, sticky = EW)
+        self.matArgsTxt = Label(self, text = 'Parameters')
+        self.matArgsTxt.grid(row = 1, column = 3, sticky = EW)
+        
+        self.uniaxialMaterialTypes = ()
+        self.ndMaterialTypes = ()
+        self.sectionTypes = ()
+        self.frictionModelTypes = ()
+        self.geomTransfTypes = ()
+        
+        basicWidth = 3
+        
+        #Comboboxes 
+        self.materialCombo = Combobox(self, width=5*basicWidth)#, textvariable = self.materialVar)
+        self.materialCombo.bind('<<ComboboxSelected>>', self.updateMatTypeCombo)
+        self.materialCombo.grid(row = 2, column = 0, sticky=EW)
+        
+        
+        self.matTypeCombo = Combobox(self, font = self.comboFont, width=5*basicWidth)
+        self.matTypeCombo.bind('<<ComboboxSelected>>',  self.updateMatArgsCombo)
+        self.matTypeCombo.grid(row = 2, column = 1, sticky = EW)
+        
+        self.matIdEntry = Entry(self, width=1*basicWidth)
+        self.matIdEntry.grid(row = 2, column = 2)
+        
+        self.matArgsEntry = Entry(self, width=15*basicWidth)
+        self.matArgsEntry.grid(row = 2, column = 3, sticky = EW)
+        
+        
+        #Buttons
+        self.buttonFrame = Frame(self)
+        self.buttonFrame.grid(row = 3, column = 0, columnspan = 4)
+        
+        self.addButt = Button(self.buttonFrame,text='Add (↓)',command = self.addMaterial)
+        self.addButt.grid(row=0,column=0)
+        self.modifyButt = Button(self.buttonFrame,text='Modify (↑)',command = self.modifyMaterial)
+        self.modifyButt.grid(row=0,column=1)
+        self.deleteButt = Button(self.buttonFrame,text='Delete (X)',command = self.deleteMaterial)
+        self.deleteButt.grid(row=0,column=2)
+        
+        #List l = Listbox(parent, height=10) 
+        self.materialListbox = Listbox(self,height=23, width=5*basicWidth)
+        self.materialListbox.grid(row = 4, column = 0, sticky = EW)
+        self.matTypeListbox = Listbox(self,height=23, width=5*basicWidth)
+        self.matTypeListbox.grid(row = 4, column = 1, sticky = EW)
+        self.matIdListbox = Listbox(self,height=23, width=1*basicWidth)
+        self.matIdListbox.grid(row = 4, column = 2)#, sticky = EW)
+        self.matArgsListbox = Listbox(self,height=23, width=15*basicWidth)
+        self.matArgsListbox.grid(row = 4, column = 3, sticky = EW)
+        
+        self.scrollMaterials = Scrollbar(self,command = self.scrollLists,orient = VERTICAL)
+        self.scrollMaterials.grid(column=5,row = 4,sticky = NSEW)
+        self.materialListbox['yscrollcommand'] = self.scrollMaterials.set
+        self.matTypeListbox['yscrollcommand'] = self.scrollMaterials.set
+        self.matIdListbox['yscrollcommand'] = self.scrollMaterials.set
+        self.matArgsListbox['yscrollcommand'] = self.scrollMaterials.set
+        
+        self.materialListbox.bind('<<ListboxSelect>>',self.changeListBoxSelection)
+        self.matTypeListbox.bind('<<ListboxSelect>>',self.changeListBoxSelection)
+        self.matIdListbox.bind('<<ListboxSelect>>',self.changeListBoxSelection)
+        self.matArgsListbox.bind('<<ListboxSelect>>',self.changeListBoxSelection)
+        
+        self.readMaterialsDatabase()
+        
+        self.materialCombo['values'] = tuple(self.materialList)
+        
+        self.columnconfigure(0,weight=5)
+        self.columnconfigure(1,weight=5)
+        self.columnconfigure(2,weight=1)
+        self.columnconfigure(3,weight=20)
+        pass
+    
+    def addMaterial(self):
+        print 'addMaterial'
+        id = self.matIdEntry.get()
+        args = self.matArgsEntry.get()
+        material = self.materialCombo.get()
+        matType = self.matTypeCombo.get()
+        
+        if len(id) == 0:
+            self.model.materials.keys()
+        
+        self.model.materials[id] = [material, matType, args]
+        print 'Added material: '+material+' '+matType+' '+str(id)+' '+args
+        self.updateMaterialLists()
+        pass
+    
+    def changeListBoxSelection(self, event):
+        #        i = []
+        #        i.append(self.materialListbox.index(self.materialListbox.selection_get()))
+        #        i.append(self.matTypeListbox.index(self.matTypeListbox.selection_get()))
+        #        i.append(self.matIdListbox.index(self.matIdListbox.selection_get()))
+        #        i.append(self.matArgsListbox.index(self.matArgsListbox.selection_get()))
+        thisListChanged = self.focus_get()
+        indx = thisListChanged.index(thisListChanged.selection_get())
+        self.materialListbox.selection_set(indx)
+        self.matTypeListbox.selection_set(indx)
+        self.matIdListbox.selection_set(indx)
+        self.matArgsListbox.selection_set(indx)
+        pass
+    
+    def modifyMaterial(self):
+        print 'modifyMaterial'
+        pass
+        
+    def deleteMaterial(self):
+        print 'deleteMaterial'
+        pass
+    
+    def updateMaterialLists(self):        
+        
+        matIds = self.model.materials.keys()
+        self.materialListbox.delete(0,'end')
+        self.matTypeListbox.delete(0,'end')
+        self.matIdListbox.delete(0,'end')
+        self.matArgsListbox.delete(0,'end')
+        for id in matIds:
+            material = matIds = self.model.materials[id]
+            self.materialListbox.insert('end',material[0])
+            self.matTypeListbox.insert('end',material[1])
+            self.matIdListbox.insert('end',id)
+            self.matArgsListbox.insert('end',material[2])
+        pass
+        
+    def scrollLists(self,event,x,y):
+        self.materialListbox.yview(event,x,y)
+        self.matTypeListbox.yview(event,x,y)
+        self.matIdListbox.yview(event,x,y)
+        self.matArgsListbox.yview(event,x,y)
+        pass
+        
+    def updateMatTypeCombo(self,event):
+        print 'updateMatTypeCombo'
+        
+        material = self.materialCombo.get()
+        matTypeList = []
+        for mat in self.matTypeDict[material]:
+            matTypeList.append(mat[0])
+        self.matTypeCombo['values'] = tuple(matTypeList)
+        self.matTypeList = matTypeList
+        pass
+    
+    def updateMatArgsCombo(self,event):
+        print 'updateMatArgsCombo'
+        material = self.materialCombo.get()
+        matType = self.matTypeCombo.get()
+        i = self.matTypeList.index(matType)
+        cmdArgs = self.matTypeDict[material][i][1]
+        self.matArgsEntry.delete(0,'end')
+        self.matArgsEntry.insert(0,cmdArgs)
+        pass
+    
+    def readMaterialsDatabase(self):
+        fname = 'materials.db'
+        fid = open(fname,'r')
+        
+        materialList = []
+        matTypeDict = {}
+        
+        i = 1
+        for line in fid:
+            if line[0] == '#' or len(line) == 0:
+                pass
+            else:
+                spline = line.split()
+                mat = spline[0]
+                if mat not in materialList:
+                    materialList.append(mat)
+                if matTypeDict.has_key(mat) == False:
+                    matTypeDict[mat] = []
+                cmd = ''
+                for comp in spline[3:]:
+                    cmd += ' '+comp
+                matTypeDict[mat].append((spline[1],cmd))
+            #print i
+            i += 1
+        self.materialList = materialList
+        self.matTypeDict = matTypeDict
+        
+        fid.close()
+    
+    def updateWidgets(self,model):
+        self.model = model
+        pass
+# ------------------------------------------------------------------------------
 # TAB: Assign
 # ------------------------------------------------------------------------------
 class FrameAssign(Frame):
@@ -179,8 +385,8 @@ class FrameAssign(Frame):
         #Generate tree root
         self.rootPhys = self.modelNavigator.insert('', 'end',text='Physical Groups',tags=('addDisabled'))
         self.rootEltype = self.modelNavigator.insert('', 'end',text='By Element Type',tags=('addDisabled'))
-        self.rootAllElements = self.modelNavigator.insert('', 'end',text='All Elements',tags=('addDisabled'))
-        self.rootAllNodes = self.modelNavigator.insert('', 'end',text='All Nodes',tags=('addDisabled'))
+        self.rootAllElements = self.modelNavigator.insert('', 'end',text='All Elements',tags=('element','addEnabled'), values='allelements')
+        self.rootAllNodes = self.modelNavigator.insert('', 'end',text='All Nodes',tags=('node','addEnabled'), values='allnodes')
         self.modelNavigator.selection_set(self.rootPhys)
         
         self.cmdList = model.assigns.keys()
@@ -237,6 +443,8 @@ class FrameAssign(Frame):
         self.modelNavigator.tag_bind('addEnabled','<ButtonPress-1><ButtonRelease-1>',self.enableSelection)        
         self.modelNavigator.tag_bind('addDisabled','<ButtonPress-1><ButtonRelease-1>',self.disableSelection)        
         
+        self.modelNavigator.bind('<Double-1>',self.addElementToAssign)
+        
         self.editCmd.createWidgets(self.model)
         if len(self.model.assigns) == 0:
             self.editCmd.disableWidgets()
@@ -265,7 +473,7 @@ class FrameAssign(Frame):
         self.currentSelection.grid(column = 3, row = 1, rowspan = 2,sticky=NSEW)
         pass
 
-    def addElementToAssign(self):
+    def addElementToAssign(self, extra='null'):
         if len(self.model.assigns) == 0:
             self.editCmd.enableWidgets()
             self.editCmd.addObjectToList(self.currentValues)
@@ -297,16 +505,18 @@ class FrameAssign(Frame):
         
     def deleteCmdFromList(self):
         curSelect = self.cmdNavigator.curselection()
-        name = self.model.assigns.keys()[currentIndex]
-        self.model.deleteCommand(name)
-        self.updateCmdList()
+        if len(curSelect) > 0:
+            currentIndex = int(curSelect[0])
+            name = self.model.cmdList[currentIndex]
+            self.model.deleteCommand(name)
+            self.updateCmdList()
         pass
         
     def movCmdUpList(self):
         curSelect = self.cmdNavigator.curselection()
         if len(curSelect) > 0:
             currentIndex = int(curSelect[0])
-            name = self.model.assigns.keys()[currentIndex]
+            name = self.model.cmdList[currentIndex]
             self.model.promoteCmd(name)
             self.updateCmdList()
         pass
@@ -315,7 +525,7 @@ class FrameAssign(Frame):
         curSelect = self.cmdNavigator.curselection()
         if len(curSelect) > 0:
             currentIndex = int(curSelect[0])
-            name = self.model.assigns.keys()[currentIndex]
+            name = self.model.cmdList[currentIndex]
             self.model.demoteCmd(name)
             self.updateCmdList()
         pass
@@ -323,20 +533,27 @@ class FrameAssign(Frame):
     def viewCommand(self,event):
         curSelect = self.cmdNavigator.curselection()
         currentIndex = int(curSelect[0])
-        name = self.model.assigns.keys()[currentIndex]
+        name = self.model.cmdList[currentIndex]
         
         cmdToView = self.model.assigns[name]
         
         cmd = cmdToView.instruction
         objectList = cmdToView.objectList
         applyTo = cmdToView.applyTo
+        applyToElemType= cmdToView.applyToElemType
+        self.editCmd.modifyThisCmd(name, cmd, objectList, applyTo,applyToElemType)
         
-        self.editCmd.modifyThisCmd(name, cmd, objectList, applyTo)
+        #        if applyTo == 'nodes':
+        #            self.editCmd.disableCombo()
+        #        elif applyTo == 'elements':
+        #            self.editCmd.disableCombo()
+        #            self.editCmd.enableCombo()
         
         print 'CMDName    = '+name+'\n'
         print 'Command    = '+cmdToView.instruction+'\n'
         print 'ApplyTo    = '+cmdToView.applyTo+'\n'
         print 'ObjectList = '+cmdToView.objectList+'\n'
+        print 'ElemType   = '+cmdToView.applyToElemType+'\n'
         
 
 # ------------------------------------------------------------------------------
@@ -476,20 +693,31 @@ class cmdEditBox(Labelframe):
         name = self.cmdNameEntry.get()
         
         if len(name) == 0:
-            messagebox.showinfo(message = 'Command must have a name')
+            Mes.showinfo(message = 'Command must have a name. Command not added.')
+            print 'Command not added.'
         else:
-            cmd = self.cmdInstructionEntry.get()
-            objectList = self.applyToEntry.get()
-            applyTo = self.assignToObjectType.get()
-            cmdObject = OpenSEESassign(cmd,objectList,applyTo)
-        
-            for obs in self.observers:
-                obs.commandAdded(cmdObject, name)
-            print str(len(self.model.assigns)) + '\n'
-            print self.model.assigns.keys()
+            if name in self.model.assigns.keys():
+                Mes.showinfo(message = 'Command already exists. Command not added.')
+                print 'Command not added.'
+            else:
+                cmd = self.cmdInstructionEntry.get()
+                
+                if len(cmd) == 0:
+                    Mes.showinfo(message = 'Empty command. Command not added.')
+                    print 'Command not added.'
+                else:
+                    objectList = self.applyToEntry.get()
+                    applyTo = self.assignToObjectType.get()
+                    applyToElemType = self.elementTypeCombo.get()
+                    cmdObject = OpenSEESassign(cmd,objectList,applyTo,applyToElemType)
+                
+                    for obs in self.observers:
+                        obs.commandAdded(cmdObject, name)
+                    print str(len(self.model.assigns)) + '\n'
+                    print self.model.assigns.keys()
         pass
         
-    def modifyThisCmd(self,name,cmd,objectList,applyTo):
+    def modifyThisCmd(self,name,cmd,objectList,applyTo,applyToElementTypes):
         self.applyToEntry.delete(0,'end')
         self.applyToEntry.insert(0,objectList)
         self.cmdNameEntry.delete(0,'end')
@@ -497,6 +725,13 @@ class cmdEditBox(Labelframe):
         self.assignToObjectType.set(applyTo)
         self.cmdInstructionEntry.delete(0,'end')
         self.cmdInstructionEntry.insert(0,cmd)
+        
+        if applyTo == 'nodes':
+            self.disableCombo()
+        if applyTo == 'elements':
+            self.disableCombo()
+            self.enableCombo()
+            self.elementTypeCombo.set(str(applyToElementTypes))
         pass
     
     def clearForm(self):
@@ -547,11 +782,13 @@ class cmdEditBox(Labelframe):
    
         for type in self.model.elemTypes.keys():
             exElem = self.model.elemTypes[type].elemList[0]
-            values.append('Type '+str(type)+ ' ({0} Nodes)'.format(len(self.model.elemDict[exElem-1].nodes)))
+            values.append('{0}'.format(type,len(self.model.elemDict[exElem-1].nodes)))
+            #values.append('Type {0:03.0f} ({1} Nodes)'.format(type,len(self.model.elemDict[exElem-1].nodes)))
             
         self.elementTypeCombo['values'] = tuple(values)
         self.elementTypeCombo.set('All')
         pass
+        
     def subscribe(self, observer):
         self.observers.append(observer)
     
@@ -561,6 +798,18 @@ class CmdNavigatorList(Listbox):
         pass
     def updateList(self,model):
         pass
+# ------------------------------------------------------------------------------
+# TAB: Patterns
+# ------------------------------------------------------------------------------
+class FramePatterns(Frame):
+    def __init__(self, parent):
+        Frame.__init__(self, parent)
+        pass
+        
+    def createWidgets(self):
+        pass
+
+
 # ------------------------------------------------------------------------------
 # TAB: Recorders
 # ------------------------------------------------------------------------------
@@ -584,6 +833,18 @@ class FrameAnalysis(Frame):
     
     def createWidgets(self):
         pass
+
+# ------------------------------------------------------------------------------
+# TAB: Analysis
+# ------------------------------------------------------------------------------
+class FrameVariables(Frame):
+    def __init__(self, parent):
+        Frame.__init__(self, parent)
+        pass
+    
+    def createWidgets(self):
+        pass
+
 
 # ------------------------------------------------------------------------------
 # Master TAB
