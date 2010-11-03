@@ -8,11 +8,21 @@ set rho 8.e-6
 nDMaterial ElasticIsotropic 1 $E $nu $rho
 
 #Leer archivo con geometria
-source amplitopo3.ops
+source amplitopo3_geometry.ops
+
+
 
 #Empotrar borde inferior
 foreach nod $nodeGRP012 {
 	fix $nod 1 1
+}
+
+foreach nod $nodeGRP011 {
+	fix $nod 0 1
+}
+
+foreach nod $nodeGRP010 {
+	fix $nod 0 1
 }
 
 #Empotrar borde izquierdo
