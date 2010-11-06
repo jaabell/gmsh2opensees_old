@@ -62,7 +62,7 @@ class Model:
                     inElements = 1
                 if line.find('EndElements')  > 0:
                     inElements = 0
-                print line#+'{0} {1}'.format(inNodes,inElements)
+                #print line#+'{0} {1}'.format(inNodes,inElements)
             
             #Leer nodos
             if inNodes:
@@ -145,6 +145,7 @@ class Model:
             model.fnames['patterns'] = fname[:-4]+'_patterns.ops'
             model.fnames['recorders'] = fname[:-4]+'_recorders.ops'
             model.fnames['analysis'] = fname[:-4]+'_analysis.ops'
+            model.fnames['variables'] = fname[:-4]+'_variables.ops'
             
             #Write to files
             model.flags = {}
@@ -156,11 +157,10 @@ class Model:
             model.flags['recorders'] = 0
             model.flags['analysis'] = 0
             model.flags['elements'] = 0
+            model.flags['variables'] = 0
         
             model.observers = []
         return model
-        #self.shoutModelChange()
-
         pass
     
     
@@ -170,7 +170,6 @@ class Model:
         databaseRead = pickle.Unpickler(fid)
         model = databaseRead.load()
         fid.close()
-        #self.shoutModelChange()
         return model
     
     #
@@ -191,10 +190,7 @@ class Model:
                 self.elemTypes[elem.eltype] .elemList = [elem.elnum]
                 pass
             pass
-        #self.shoutModelChange()
-    
-    
-        
+
     
     #
     #Command (assigns) manipulation Methods
@@ -224,7 +220,6 @@ class Model:
     def promoteCmd(self, cmdName):
         cmdList = self.cmdList
         idx = cmdList.index(cmdName)
-        #print 'idx = {0}\n'.format(idx)
         if idx > 0:
             aux = cmdList[idx-1]
             cmdList[idx - 1] = cmdName
@@ -244,7 +239,23 @@ class Model:
         self.shoutModelChange()
         pass
 
-
+    #
+    #Materials
+    #
+    def addMaterial(self,id,material):
+        self.materials[id] = material
+        if len(self.materials) == 0:
+            pass
+        else:
+            self.flags['materials'] = 1
+        self.shoutModelChange()
+        pass
+        
+    def deleteMaterial(self,id):
+        self.materials.pop(id)
+        self.shoutModelChange()
+        pass
+        
     #
     #Output Methods
     #
@@ -271,6 +282,9 @@ class Model:
         #Header
         fid.write('#File auto-generated with gmsh2opensees from:'+self.sourceFile+'\n')
         fid.write('#\n')
+        
+        if self.flags['variables'] == 1:
+            fid.write('\n \n source '+self.fnames['variables']+' \n\n')
         
         #Writeout nodes
         fid.write('#Nodes\n')
@@ -330,26 +344,73 @@ class Model:
             fid.write('puts \"node'+grupNum+'    elem'+grupNum+' \"\n')
         fid.close()
         
-    def writeMaterials(self,outfname):
+    def writeMaterials(self, fid=[]):
+        if len(fid) == 0:
+            fid = open(self.fnames['materials'],'w')
+        else:
+            pass
+        
+        fid.write('#File auto-generated with gmsh2opensees from:'+self.sourceFile+'\n')
+        fid.write('#\n')
+        
+        if self.flags['variables'] == 1:
+            fid.write('\n \n source '+self.fnames['variables']+' \n\n')
+        
+        #Writeout nodes
+        fid.write('#Materials\n')
+        
+        for id in self.materials:
+            mat = self.materials[id]
+            fid.write(mat[0]+' '+mat[1]+' '+str(id)+' '+mat[2]+'\n')
+        fid.close()
         pass
         
-    def writeAssigns(self,outfname):
+    def writeAssigns(self, fid = []):
+        if len(fid) == 0:
+            fid = open(self.fnames['assigns'],'w')
+        else:
+            pass
+        
+        fid.write('#File auto-generated with gmsh2opensees from:'+self.sourceFile+'\n')
+        fid.write('#\n')
+        
+        if self.flags['variables'] == 1:
+            fid.write('\n \n source '+self.fnames['variables']+' \n\n')
+        
+        for key in self.assigns.keys():
+            cmd = self.assigns[key]
+            if cmd.isElementAssign:
+                pass
+            else:
+                cmd.writeCommand(fid,model=self)
+            
+        fid.close()
         pass
         
     def writePatterns(self,outfname):
+        if self.flags['variables'] == 1:
+            fid.write('\n \n source '+self.fnames['variables']+' \n\n')
         pass
         
     def writeRecorders(self,outfname):
+        if self.flags['variables'] == 1:
+            fid.write('\n \n source '+self.fnames['variables']+' \n\n')
         pass
         
     def writeAnalysis(self,outfname):
+        if self.flags['variables'] == 1:
+            fid.write('\n \n source '+self.fnames['variables']+' \n\n')
         pass
         
-    def writeMaster(self,outfname):
+    def writeMaster(self):
+        if self.flags['variables'] == 1:
+            fid.write('\n \n source '+self.fnames['variables']+' \n\n')
+        
         fid = open(self.fnames['master'],'wt')
         for key in self.fnames.keys():
             if self.flags[key] == 1:
-                fid.write('source '+fnames[key]+'\n')
+                fid.write('source '+self.fnames[key]+'\n')
+            
         fid.close()
         pass
         
@@ -377,7 +438,7 @@ class OpenSEESassign:
     
     #Defines an OpenSees command object class. This class generates aids in writing the TCL
     # to assign properties to elements in groups. 
-    # Use element quad $ele $n01 $n02 $n03 $n04 1.0 'PlaneStrain' 1
+    # Example element assignment command: Use element quad $ele $n01 $n02 $n03 $n04 1.0 'PlaneStrain' 1
     def __init__(self, instruction, objectList, applyTo='nodes', applyToElemType = 'All'):
         
         #Private attributes
@@ -424,36 +485,44 @@ class OpenSEESassign:
         return cmd
     
     def getNodeTCLCommand(self,model):
-        if self.instruction.find('$ele') == -1:
+        cmd = ''
+        if self.instruction.find('$ele') > 0:
             print 'gmsh2opensees.py: OpenSEESassign.getNodeTCLCommand(): \'$ele\' string found in node command'
+            print self.instruction
             pass
         else:
-            str = self.autoCodeString
-            str += 'for nod [list '
-            for nod in getObjectIds(model):
-                str += '{0} '.format(nod)
-            str += '] { \n'
-            str += self.instruction+'\n'
-            str += '} \n \n'
+            cmd = self.autoCodeString
+            cmd += 'for nod [list '
+            for nod in self.getObjectIds(model):
+                cmd += '{0} '.format(nod)
+            cmd += '] { \n'
+            cmd += self.instruction+'\n'
+            cmd += '} \n \n'
+            print cmd
             pass
+        return cmd
         
     def getElemTCLCommand(self,model):
-        if self.instruction.find('$nod') == -1:
+        cmd = ''
+        if self.instruction.find('$nod') > 0:
             print 'gmsh2opensees.py: OpenSEESassign.getElemTCLCommand(): \'$nod\' string found in element command'
             pass
         else:
-            str = self.autoCodeString
-            str += 'for ele [list '
-            for ele in getObjectIds(model):
-                str += '{0} '.format(ele)
-            str += '] { \n'
-            str += self.instruction+'\n'
-            str += '} \n \n'
+            cmd = self.autoCodeString
+            cmd += 'for ele [list '
+            for ele in self.getObjectIds(model):
+                cmd += '{0} '.format(ele)
+            cmd += '] { \n'
+            cmd += self.instruction+'\n'
+            cmd += '} \n \n'
+            print cmd
             pass
+        return cmd
         pass 
         
     def getObjectIds(self, model):
-        spList = self.objectList.splic(sep = '+')
+        print self.objectList
+        spList = self.objectList.split('+')
         
         #Initialize list that will contain the object (element or nodes) ids
         objIds = []
@@ -462,11 +531,11 @@ class OpenSEESassign:
         for obj in spList:
             type = obj[:3]
             idnum = obj[3:]
-            
+            idx = model.physgrp.index(int(idnum))
             if self.applyTo == 'elements':
                 #Element Groups
                 if type == 'egr':
-                    elemIds = model.elemPG[int(idnum)]
+                    elemIds = model.elemPG[idx]
                     objIds = objIds+elemIds
                 
                 #Just 1 element
@@ -481,12 +550,12 @@ class OpenSEESassign:
             if self.applyTo == 'nodes':
                 #Node Groups
                 if type == 'ngr':
-                    nodeIds = model.nodePG[int(idnum)]
+                    nodeIds = model.nodePG[idx]
                     objIds = objIds+nodeIds
                     
                 #Just 1 node
                 if  type == 'nod':
-                    objIds = objIds + [int(idnum)]
+                    objIds = objIds + [idnum]
                     
                 #All nodes
                 if obj == 'allnodes':
@@ -516,9 +585,9 @@ class OpenSEESassign:
             print "libgmsh2opensees.py: OpenSEESassign.writeAssign(): Warning: Command applied to empty group."
         return objIds
         
-    def writeCommand(self, fid, elemDict = [], variables = {}):
+    def writeCommand(self, fid, elemDict = [], variables = {}, model=[]):
         if self.applyTo == 'nodes':
-            fid.write(self.getNodeTclCommand()+'\n\n')
+            fid.write(self.getNodeTCLCommand(model))#+'\n\n')
             pass
         
         if self.applyTo == 'elements':
@@ -531,7 +600,6 @@ class OpenSEESassign:
                             cmd = self.instruction
                             i = 1
                             for nod in elem.nodes:
-                                #print self.__nodeFormat__ .format(float(i))
                                 cmd = cmd.replace(self.__nodeFormat__ .format(float(i)), str(nod))
                                 i += 1
                             cmd = cmd.replace('$ele',str(elem.elnum))
@@ -539,7 +607,7 @@ class OpenSEESassign:
                             fid.write(cmd+'\n')
                 pass
             else:
-                fid.write(self.getElemTclCommand()+'\n\n')
+                fid.write(self.getElemTclCommand(model)+'\n\n')
                 pass
             pass
         pass

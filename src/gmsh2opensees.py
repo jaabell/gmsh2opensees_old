@@ -1,13 +1,17 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Sat Oct 23 07:53:48 2010
+# gmsh2opensees: A GUI application to transform .gmsh output files
+# into opensees commands and read ouput back into gmsh
+#
+# 2010 - José Antonio Abell
+#
 
-@author: jose
-"""
 from libtabs import *
 from tkFileDialog import askopenfilename
 from tkFileDialog import asksaveasfilename
 import tkMessageBox as Mes
+from webbrowser import open_new_tab
+from splash import SplashScreen
+import platform
 
 from libgmsh2opensees import *
 
@@ -16,15 +20,9 @@ class App:
         # ----------------------------------------------------------------------
         #Title
         # ----------------------------------------------------------------------
-               
-        
         #Create Menubar
-        #self.win = Toplevel(self)
-        #self.win = Toplevel(self.master)
-        #self.topMenu = Menu(self.win)
         self.topMenu = Menu(self.master)
         self.master['menu'] = self.topMenu
-        #self['menu'] = self.topMenu
         
         self.menu_file = Menu(self.topMenu)
         self.menu_edit = Menu(self.topMenu)
@@ -34,7 +32,6 @@ class App:
         self.topMenu.add_cascade(menu = self.menu_edit, label = 'Edit')
         self.topMenu.add_cascade(menu = self.menu_run, label = 'Run')
         self.topMenu.add_cascade(menu = self.menu_about, label = '?')
-        
         
         # FILE MENU
         # Index
@@ -64,7 +61,12 @@ class App:
         self.menu_file.add_command(label = 'Save Patterns', command = self.savePat, state = 'disabled')
         self.menu_file.add_command(label = 'Save Recorders', command = self.saveRec, state = 'disabled')
         self.menu_file.add_command(label = 'Save Analysis', command = self.saveAnalysis, state = 'disabled')
+        self.menu_file.add_command(label = 'Save Master File', command = self.saveMaster, state = 'disabled')
         self.menu_file.add_command(label = 'Save All Files', command = self.saveAll, state = 'disabled')
+        
+        self.menu_file.add_separator()
+        
+        self.menu_file.add_command(label = 'Close', command = self.closeMainWindow, state = 'normal')
         
         # EDIT MENU
         self.editProjectFilesButt = self.menu_edit.add_command(label = 'Project Files', command = self.editProjectFiles)
@@ -75,10 +77,14 @@ class App:
         self.getResultsButt = self.menu_run.add_command(label = 'Get Results', command = self.getResults)
         
         # About MENU
+        self.openSEESHelp =  'http://opensees.berkeley.edu/wiki/index.php/OpenSees_User'
+        self.openOpenSEESHelp = lambda url=0: webbrowser.open_new_tab(self.openSEESHelp)
         self.menu_about.add_command(label = 'Help', command = self.showHelp)
+        self.menu_about.add_command(label = 'OpenSEES Help', command = self.openOpenSEESHelp)
+        self.menu_about.add_separator()
         self.menu_about.add_command(label = 'About...', command = self.showAbout)
         
-        # ----------------------------------------------------------------------
+         # ----------------------------------------------------------------------
         # Tabs setup
         # ----------------------------------------------------------------------
         self.tabMaster = GenTabMaster(self.master)
@@ -111,26 +117,18 @@ class App:
         self.tabMaster.add(self.tabVariables, text='Variables', state='disabled')
         self.tabVariables.createWidgets()
 
-
         self.tabMaster.pack()
-        
-        # ----------------------------------------------------------------------
-        # Lower Save Buttons
-        # ----------------------------------------------------------------------
-        
-        #self.buttonFrame = Frame(self.master)
-        #self.buttonFrame.pack(expand = 1)
         
     def loadGmshFile(self):
         self.fname = askopenfilename(parent=self.master, title="gmsh2OpenSEES:  Seleccionar malla de origen", initialdir=".", filetypes=[("GMSH mesh","*.msh")])
-        self.model = Model.loadFromGmshFile(self.fname)
+        
+        if len(self.fname) > 0:
+            self.model = Model.loadFromGmshFile(self.fname)
         
         if self.model.success == 1:
             print 'Success in loading GMSH file!'
             self.activateGui()
             self.model.subscribe(self)
-          
-              
         else:
             pass
         
@@ -141,11 +139,16 @@ class App:
         pass
     
     def saveMat(self):
-        print 'saveMat'
+        self.outfname = asksaveasfilename(parent=self.master,title="gmsh2OpenSEES: Seleccionar el archivo de destino", filetypes=[("OpenSEES TCL Script","*.ops")], initialfile=self.model.fnames['materials'])
+        self.model.fnames['materials'] = self.outfname
+        self.model.writeMaterials()
         pass
 
     def saveAssigns(self):
         print 'saveAssigns'
+        self.outfname = asksaveasfilename(parent=self.master,title="gmsh2OpenSEES: Seleccionar el archivo de destino", filetypes=[("OpenSEES TCL Script","*.ops")], initialfile=self.model.fnames['assigns'])
+        self.model.fnames['assigns'] = self.outfname
+        self.model.writeAssigns()
         pass
         
     def savePat(self):
@@ -160,21 +163,54 @@ class App:
         print 'saveAnalysis'
         pass
         
+    def saveMaster(self):
+        print 'saveMaster'
+        self.outfname = asksaveasfilename(parent=self.master,title="gmsh2OpenSEES: Seleccionar el archivo de destino", filetypes=[("OpenSEES TCL Script","*.ops")], initialfile=self.model.fnames['master'])
+        self.model.fnames['master'] = self.outfname
+        self.model.writeMaster()
+        pass
+        
     def saveAll(self):
-        print 'saveRec'
+        print 'Saving Geometry specification to  '+str(self.model.flags['geometry'])+' :'+self.model.fnames['geometry']+'\n'
+        print 'Saving Material specifications to '+str(self.model.flags['materials'])+' :'+self.model.fnames['materials']+'\n'
+        print 'Saving Assigns to                 '+str(self.model.flags['assigns'])+' :'+self.model.fnames['assigns']+'\n'
+        print 'Saving Patterns to                '+str(self.model.flags['patterns'])+' :'+self.model.fnames['patterns']+'\n'
+        print 'Saving Analysis Options to        '+str(self.model.flags['analysis'])+' :'+self.model.fnames['analysis']+'\n'
+        print 'Saving Variables to               '+str(self.model.flags['variables'])+' :'+self.model.fnames['variables']+'\n'
+        print 'Saving Recorder Settings to       '+str(self.model.flags['recorders'])+' :'+self.model.fnames['recorders']+'\n\n'
+        print '                   >> MASTER FILE '+str(self.model.flags['master'])+' :'+self.model.fnames['master']+'\n'
+        if self.model.flags['geometry'] == 1:
+            self.model.writeGeometry()
+        if self.model.flags['materials'] == 1:
+            self.model.writeMaterials()
+        if self.model.flags['assigns'] == 1:
+            self.model.writeAssigns()
+        if self.model.flags['master'] == 1:
+            self.model.writeMaster()
+        if self.model.flags['patterns'] == 1:
+            pass
+        if self.model.flags['recorders'] == 1:
+            pass
+        if self.model.flags['analysis'] == 1:
+            pass
+        if self.model.flags['elements'] == 1:
+            pass
+        if self.model.flags['variables'] == 1:
+            self.model.writeVariables()
+            pass
         pass
         
     def loadProject(self):
         print 'loadProject'
         self.fname = askopenfilename(parent=self.master, title="gmsh2OpenSEES:  Seleccionar el archivo de destino", initialdir=".", filetypes=[("gmsh2opensees Binary Model Representation","*.bmr")])
-        self.model = Model.loadDatabase(self.fname)
-        print 'Success in loading GMSH file!'
-        
-        if self.model.success == 1:
-            self.activateGui()
-            self.model.subscribe(self)
-            self.catchModelChange()
-        
+        if len(self.fname) > 0:
+            self.model = Model.loadDatabase(self.fname)
+            print 'Success in loading GMSH file!'        
+            if self.model.success == 1:
+                self.activateGui()
+                self.model.subscribe(self)
+                #self.catchModelChange()
+                self.checkModelFlags()
         pass
         
     def activateGui(self):
@@ -188,13 +224,12 @@ class App:
         self.tabMaster.select(0)
         self.menu_file.entryconfig(3,state = 'normal')
         self.menu_file.entryconfig(5,state = 'normal')
-        #self.saveGeomButt['state'] = "normal"
+        self.menu_file.entryconfig(11,state = 'normal')
+        self.menu_file.entryconfig(12,state = 'normal')
         
         self.tabSummary.updateWidgets(self.model)
         self.tabAssign.updateWidgets(self.model)
         self.tabMaterials.updateWidgets(self.model)
-        #self.saveProjectButt['state'] = 'normal'
-        #self.dumpModelButt['state'] = 'normal'
             
     def saveProject(self):
         fname = asksaveasfilename(parent=self.master,title="gmsh2OpenSEES: Seleccionar el archivo de destino", filetypes=[("gmsh2opensees Binary Model Representation","*.bmr")], initialfile=self.fname[:-4]+'.bmr')
@@ -226,66 +261,58 @@ class App:
         # 9: Save Recorders
         # 10: Save Analysis
         # 11: Save All files
+        # 12: Save Master
+        # 13: ---------- SEPARATOR-----------
+        # 14: Close gui
+        
         if self.model.flags['geometry'] == 1:
             self.menu_file.entryconfig(5,state='normal')
-            #self.saveGeomButt['state'] = 'normal'
+            self.menu_file.entryconfig(12,state='normal')
         else:
             self.menu_file.entryconfig(5,state='disabled')
-            #self.saveGeomButt['state'] = 'disabled'
+            self.menu_file.entryconfig(12,state='disabled')
             pass
             
         if self.model.flags['master'] == 1:
-            #self.saveMasterButt['state'] = 'normal'
+            self.menu_file.entryconfig(11,state='normal')
             pass
         else:
-            #self.saveMasterButt['state'] = 'disabled'
+            self.menu_file.entryconfig(11,state='disabled')
             pass
             
         if self.model.flags['materials'] == 1:
             self.menu_file.entryconfig(6,state='normal')
-            #self.saveMatButt['state'] = 'normal'
         else:
             self.menu_file.entryconfig(6,state='disabled')
-            #self.saveMatButt['state'] = 'disabled'
             pass
             
         if self.model.flags['assigns'] == 1:
             self.menu_file.entryconfig(7,state='normal')
-            #self.saveAssignButt['state'] = 'normal'
         else:
             self.menu_file.entryconfig(7,state='disabled')
-            #self.saveAssignButt['state'] = 'disabled'
             pass
             
         if self.model.flags['patterns'] == 1:
             self.menu_file.entryconfig(8,state='normal')
-            #self.savePatButt['state'] = 'normal'
         else:
             self.menu_file.entryconfig(8,state='disabled')
-            #self.savePatButt['state'] = 'disabled'
             pass
             
         if self.model.flags['recorders'] == 1:
             self.menu_file.entryconfig(9,state='normal')
-            #self.saveRecButt['state'] = 'normal'
         else:
             self.menu_file.entryconfig(9,state='disabled')
-            #self.saveRecButt['state'] = 'disabled'
             pass
             
         if self.model.flags['analysis'] == 1:
             self.menu_file.entryconfig(10,state='normal')
-            #self.saveAnalysisButt['state'] = 'normal'
         else:
             self.menu_file.entryconfig(10,state='disabled')
-            #self.saveAnalysisButt['state'] = 'disabled'
             pass
             
         if self.model.flags['elements'] == 1:
-            #self.saveGeomButt['state'] = 'normal'
             pass
         else:
-            #self.saveGeomButt['state'] = 'disabled'
             pass
             
     def clearProject(self):
@@ -304,6 +331,16 @@ class App:
         pass
         
     def showAbout(self):
+        self.splash = Toplevel(self.master)
+        self.splash.wm_iconbitmap('icons/clone-old.ico')
+        self.splash.imgobj = PhotoImage(file='icons/splash.gif')
+        self.splash.picture = Label(self.splash)
+        self.splash.picture['image'] = self.splash.imgobj
+        self.splash.picture.grid(row = 0, column = 0)
+        self.splash.agradecimientos = Label(self.splash,text='(C)2010 Universidad de los Andes + Gracias Matías Recabarren')
+        self.splash.agradecimientos.grid(row = 1, column=0)
+        self.splash.okButt = Button(self.splash,text='Ok',command=self.splash.destroy)
+        self.splash.okButt.grid(row = 2, column = 0)
         pass
         
     def showHelp(self):
@@ -319,6 +356,15 @@ class App:
         self.updateWidgets()
         pass
     
+    def closeMainWindow(self):
+        ans = Mes.askyesno(message='This will end current session', icon='warning', title='gmsh2OpenSEES: exit')
+        
+        if ans == TRUE:
+            self.master.destroy()
+        else:
+            pass
+        pass
+    
     def __init__(self, master):
         self.master = master
         self.master.title("gmsh2OpenSEES")
@@ -326,9 +372,14 @@ class App:
         self.createWidgets()
         
 
-
 # MAIN
 root = Tk()
 root.option_add('*tearOff', FALSE)   #Remove undockable menus
-model = App(root)
+
+if platform.system() == 'Windows':
+    root.wm_iconbitmap('icons/clone-old.ico')
+
+with SplashScreen( root, 'icons/splash.gif', 1.0 ):
+   App(root)
+
 root.mainloop()
