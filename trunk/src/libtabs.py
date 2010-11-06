@@ -152,7 +152,7 @@ class FrameMaterials(Frame):
         self.matTypeCombo.bind('<<ComboboxSelected>>',  self.updateMatArgsCombo)
         self.matTypeCombo.grid(row = 2, column = 1, sticky = EW)
         
-        self.matIdEntry = Entry(self, width=1*basicWidth)
+        self.matIdEntry = Label(self, width=1*basicWidth)
         self.matIdEntry.grid(row = 2, column = 2)
         
         self.matArgsEntry = Entry(self, width=15*basicWidth)
@@ -165,32 +165,26 @@ class FrameMaterials(Frame):
         
         self.addButt = Button(self.buttonFrame,text='Add (↓)',command = self.addMaterial)
         self.addButt.grid(row=0,column=0)
-        self.modifyButt = Button(self.buttonFrame,text='Modify (↑)',command = self.modifyMaterial)
+        self.modifyButt = Button(self.buttonFrame,text='Modify (↓)',command = self.modifyMaterial)
         self.modifyButt.grid(row=0,column=1)
         self.deleteButt = Button(self.buttonFrame,text='Delete (X)',command = self.deleteMaterial)
         self.deleteButt.grid(row=0,column=2)
         
-        #List l = Listbox(parent, height=10) 
-        self.materialListbox = Listbox(self,height=23, width=5*basicWidth)
-        self.materialListbox.grid(row = 4, column = 0, sticky = EW)
-        self.matTypeListbox = Listbox(self,height=23, width=5*basicWidth)
-        self.matTypeListbox.grid(row = 4, column = 1, sticky = EW)
-        self.matIdListbox = Listbox(self,height=23, width=1*basicWidth)
-        self.matIdListbox.grid(row = 4, column = 2)#, sticky = EW)
-        self.matArgsListbox = Listbox(self,height=23, width=15*basicWidth)
-        self.matArgsListbox.grid(row = 4, column = 3, sticky = EW)
+        self.materialView = Treeview(self, height = 15, columns = ('Type','Id','Parameters'))
+        self.materialView.column('Type', width=5*basicWidth, anchor='center')
+        self.materialView.column('Id', width=1*basicWidth, anchor='center')
+        self.materialView.column('Parameters', width=15*basicWidth, anchor='center')
+        self.materialView.heading('Type', text='Type')
+        self.materialView.heading('Id', text='Id')
+        self.materialView.heading('Parameters', text='Parameters')
+        self.materialView.grid(row=4, column = 0, columnspan=4, sticky=EW)
         
-        self.scrollMaterials = Scrollbar(self,command = self.scrollLists,orient = VERTICAL)
+        self.scrollMaterials = Scrollbar(self,command = self.materialView.yview,orient = VERTICAL)
         self.scrollMaterials.grid(column=5,row = 4,sticky = NSEW)
-        self.materialListbox['yscrollcommand'] = self.scrollMaterials.set
-        self.matTypeListbox['yscrollcommand'] = self.scrollMaterials.set
-        self.matIdListbox['yscrollcommand'] = self.scrollMaterials.set
-        self.matArgsListbox['yscrollcommand'] = self.scrollMaterials.set
         
-        self.materialListbox.bind('<<ListboxSelect>>',self.changeListBoxSelection)
-        self.matTypeListbox.bind('<<ListboxSelect>>',self.changeListBoxSelection)
-        self.matIdListbox.bind('<<ListboxSelect>>',self.changeListBoxSelection)
-        self.matArgsListbox.bind('<<ListboxSelect>>',self.changeListBoxSelection)
+        self.materialView['yscrollcommand'] = self.scrollMaterials.set
+        
+        self.materialView.bind('<Double-1>',self.loadMaterial)
         
         self.readMaterialsDatabase()
         
@@ -200,68 +194,79 @@ class FrameMaterials(Frame):
         self.columnconfigure(1,weight=5)
         self.columnconfigure(2,weight=1)
         self.columnconfigure(3,weight=20)
+        
+        self.treeItemIdList = []
         pass
     
     def addMaterial(self):
         print 'addMaterial'
-        id = self.matIdEntry.get()
+        if len(self.model.materials.keys()) == 0:
+            id = 1
+        else:
+            id = max(self.model.materials.keys())+1
         args = self.matArgsEntry.get()
         material = self.materialCombo.get()
         matType = self.matTypeCombo.get()
-        
-        if len(id) == 0:
-            self.model.materials.keys()
-        
-        self.model.materials[id] = [material, matType, args]
+        self.model.addMaterial(id,[material, matType, args])
+        #self.model.materials[id] = [material, matType, args]
         print 'Added material: '+material+' '+matType+' '+str(id)+' '+args
         self.updateMaterialLists()
         pass
     
-    def changeListBoxSelection(self, event):
-        #        i = []
-        #        i.append(self.materialListbox.index(self.materialListbox.selection_get()))
-        #        i.append(self.matTypeListbox.index(self.matTypeListbox.selection_get()))
-        #        i.append(self.matIdListbox.index(self.matIdListbox.selection_get()))
-        #        i.append(self.matArgsListbox.index(self.matArgsListbox.selection_get()))
-        thisListChanged = self.focus_get()
-        indx = thisListChanged.index(thisListChanged.selection_get())
-        self.materialListbox.selection_set(indx)
-        self.matTypeListbox.selection_set(indx)
-        self.matIdListbox.selection_set(indx)
-        self.matArgsListbox.selection_set(indx)
-        pass
-    
-    def modifyMaterial(self):
+    def loadMaterial(self, event):
         print 'modifyMaterial'
+        self.currentValues = self.materialView.item(self.materialView.focus(), option = 'values')
+        material = self.materialView.item(self.materialView.focus(), option = 'text')
+        self.materialCombo.set(material)
+        self.updateMatTypeCombo()
+        self.matTypeCombo.set(self.currentValues[0])
+        self.matIdEntry['text'] = self.currentValues[1]
+        self.matArgsEntry.delete(0,'end')
+        self.matArgsEntry.insert(0,self.currentValues[2])
         pass
         
+    def modifyMaterial(self,*args):
+        self.currentValues = self.materialView.item(self.materialView.focus(), option = 'values')
+
+        id = int(self.currentValues[1])
+        args = self.matArgsEntry.get()
+        material = self.materialCombo.get()
+        matType = self.matTypeCombo.get()
+        
+        self.model.materials[id] = [material, matType, args]
+        print 'Modified material: '+material+' '+matType+' '+str(id)+' '+args
+        self.updateMaterialLists()
+        pass
+    
     def deleteMaterial(self):
-        print 'deleteMaterial'
+        self.currentValues = self.materialView.item(self.materialView.focus(), option = 'values')
+        if len(self.currentValues) == 0:
+            pass
+        else:
+            id = int(self.currentValues[1])
+            self.model.deleteMaterial(id)
+            self.updateMaterialLists()
+            print 'deleteMaterial'
         pass
     
     def updateMaterialLists(self):        
         
         matIds = self.model.materials.keys()
-        self.materialListbox.delete(0,'end')
-        self.matTypeListbox.delete(0,'end')
-        self.matIdListbox.delete(0,'end')
-        self.matArgsListbox.delete(0,'end')
+        
+        if len(self.treeItemIdList) == 0:
+            pass
+        else:
+            for treeItemId in self.treeItemIdList:
+                self.materialView.delete(treeItemId)
+            self.treeItemIdList = []
+
         for id in matIds:
-            material = matIds = self.model.materials[id]
-            self.materialListbox.insert('end',material[0])
-            self.matTypeListbox.insert('end',material[1])
-            self.matIdListbox.insert('end',id)
-            self.matArgsListbox.insert('end',material[2])
+            material = self.model.materials[id]
+            treeItemId = self.materialView.insert('', 'end', text=material[0], values=(material[1], str(id), material[2]))
+            self.treeItemIdList.append(treeItemId)
         pass
         
-    def scrollLists(self,event,x,y):
-        self.materialListbox.yview(event,x,y)
-        self.matTypeListbox.yview(event,x,y)
-        self.matIdListbox.yview(event,x,y)
-        self.matArgsListbox.yview(event,x,y)
-        pass
-        
-    def updateMatTypeCombo(self,event):
+    def updateMatTypeCombo(self,*args):
         print 'updateMatTypeCombo'
         
         material = self.materialCombo.get()
@@ -272,7 +277,7 @@ class FrameMaterials(Frame):
         self.matTypeList = matTypeList
         pass
     
-    def updateMatArgsCombo(self,event):
+    def updateMatArgsCombo(self,*args):
         print 'updateMatArgsCombo'
         material = self.materialCombo.get()
         matType = self.matTypeCombo.get()
@@ -313,6 +318,7 @@ class FrameMaterials(Frame):
     
     def updateWidgets(self,model):
         self.model = model
+        self.updateMaterialLists()
         pass
 # ------------------------------------------------------------------------------
 # TAB: Assign
