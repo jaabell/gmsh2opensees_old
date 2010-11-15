@@ -1,0 +1,50 @@
+# analysOptions.db
+#
+# This file contains the analysis options command database reported on the OpenSEES website.
+# Adding a new option is as easy as adding a line with the command this line.
+#
+# The '#' symbol comments a line if it is the first character in the line.
+#
+# Date of compilation: 15-Nov-2010
+# Compiled by: Jose Abell
+#
+#
+constraints Plain 
+constraints Lagrange <$alphaS $alphaM >
+constraints Penalty $alphaS $alphaM
+constraints Transformation
+numberer Plain
+numberer RCM
+numberer AMD
+system BandGeneral
+system BandSPD
+system ProfileSPD
+system SparseGEN
+system UmfPack
+system SparseSYM
+test NormUnbalance $tol $iter <$pFlag>
+test NormDispIncr $tol $iter <$pFlag>
+test EnergyIncr $tol $iter <$pFlag>
+test RelativeNormUnbalance $tol $iter <$pFlag>
+test RelativeNormDispIncr $tol $iter <$pFlag>
+test RelativeEnergyIncr $tol $iter <$pFlag>
+algorithm Linear <-secant> <-initial>
+algorithm Newton <-secant> <-initial> <-initialThenCurrent>
+algorithm NewtonLineSearch <-type $typeSearch> <-tol $tol> <-maxIter $maxIter> <-minEta $minEta> <-maxEta $maxEta>
+algorithm ModifiedNewton <-secant> <-initial>
+algorithm KrylovNewton <-iterate $tangIter> <-increment $tangIncr> <-maxDim $maxDim>
+algorithm Broyden <$count>
+#integrator ! --Static Integrators
+integrator LoadControl $lambda <$numIter $minLambda $maxLambda>
+integrator DisplacementControl $node $dof $incr <$numIter $ΔUmin $ΔUmax $maxLambda>
+integrator MinUnbalDispNorm $dlambda1 <$Jd $minLambda $maxLambda>
+integrator ArcLength $s $alpha
+#integrator ! --Transient Integrators
+integrator CentralDifference
+integrator Newmark $gamma $beta
+integrator HHT $alpha <$gamma $beta>
+integrator HHT $alphaM $alphaF <$gamma $beta>
+integrator TRBDF2
+analysis Static
+analysis Transient
+analysis VariableTransient

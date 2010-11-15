@@ -1,18 +1,27 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Sat Oct 23 07:53:48 2010
+# gmsh2opensees: A GUI application to transform .gmsh output files
+# into opensees commands and read ouput back into gmsh
+#Copyright (C) 2010 José Antonio Abell Mena
+#
+#This program is free software; you can redistribute it and/or
+#modify it under the terms of the GNU General Public License
+#as published by the Free Software Foundation; either version 2
+#of the License, or (at your option) any later version.
+#
+#This program is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#GNU General Public License for more details.
+#
+#You should have received a copy of the GNU General Public License
+#along with this program; if not, write to the Free Software
+#Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-@author: jose
-"""
 from Tkinter import *
 from ttk import *
 from libgmsh2opensees import *
 import tkMessageBox as Mes
 import tkFont as font
-
-#from Tkinter.ttk import *
-#from pyTtk import *
-
 
 
 # ------------------------------------------------------------------------------
@@ -836,10 +845,304 @@ class FrameAnalysis(Frame):
     def __init__(self, parent):
         Frame.__init__(self, parent)
         pass
-    
+    #===============================================================================
+    #     constraints Command
+    #     numberer Command
+    #     system Command
+    #     test Command
+    #     algorithm Command
+    #     integrator Command
+    #     analysis Command
+    #===============================================================================
     def createWidgets(self):
+        self.title = Label(self,text = 'Analysis Options')
+
+        ii = 0
+        jj = 0
+        self.title.grid(row = ii, column = 0, columnspan = 3)
+        ii += 1
+        
+        self.headOption = Label(self,text = 'Option:',anchor=W) 
+        self.headType = Label(self,text = 'Type:',anchor=W)        
+        self.headParameters = Label(self,text = 'Parameters:',anchor=W)
+        self.headOption.grid(row = ii, column  = 0, )
+        self.headType.grid(row = ii, column  = 1)
+        self.headParameters.grid(row = ii, column  = 2)
+        ii += 1
+        
+        self.labelConstraints = Label(self,text = 'Constraints: ',anchor=E)
+        self.labelConstraints.grid(row = ii,column=0)
+        self.menuConstraints = Combobox(self)
+        self.menuConstraints.grid(row = ii,column=1)
+        self.entryConstraints = Entry(self)
+        self.entryConstraints.grid(row=ii,column=2,sticky=EW)
+        ii += 1
+        
+        self.labelNumberer = Label(self,text = 'Numberer: ',anchor=E)
+        self.labelNumberer.grid(row = ii,column=0)
+        self.menuNumberer = Combobox(self)
+        self.menuNumberer.grid(row = ii,column=1)
+        self.entryNumberer = Entry(self)
+        self.entryNumberer.grid(row=ii,column=2,sticky=EW)
+        ii += 1
+        
+        self.labelSystem = Label(self,text = 'System: ',anchor=E)
+        self.labelSystem.grid(row = ii,column=0)
+        self.menuSystem = Combobox(self)
+        self.menuSystem.grid(row = ii,column=1)
+        self.entrySystem = Entry(self)
+
+        self.entrySystem.grid(row=ii,column=2,sticky=EW)
+        ii += 1
+        
+        self.labelTest = Label(self,text = 'Test: ',anchor=E)
+        self.labelTest.grid(row = ii,column=0)
+        self.menuTest = Combobox(self)
+        self.menuTest.grid(row = ii,column=1)
+        self.entryTest = Entry(self)
+        self.entryTest.grid(row=ii,column=2,sticky=EW)
+        ii += 1
+        
+        self.labelAlgorithm = Label(self,text = 'Algorithm: ',anchor=E)
+        self.labelAlgorithm.grid(row = ii,column=0)
+        self.menuAlgorithm = Combobox(self)
+        self.menuAlgorithm.grid(row = ii,column=1)
+        self.entryAlgorithm = Entry(self)
+        self.entryAlgorithm.grid(row=ii,column=2,sticky=EW)
+        ii += 1
+        
+        self.labelAnalysis = Label(self,text = 'Analysis: ',anchor=E)
+        self.labelAnalysis.grid(row = ii,column=0)
+        self.menuAnalysis = Combobox(self)
+        self.menuAnalysis.grid(row = ii,column=1)
+        self.entryAnalysis = Entry(self)
+        self.entryAnalysis.grid(row=ii,column=2,sticky=EW)
+        ii += 1           
+        
+        self.labelIntegrator = Label(self,text = 'Integrator: ',anchor=E)
+        self.labelIntegrator.grid(row = ii,column=0)
+        self.menuIntegrator = Combobox(self)
+        self.menuIntegrator.grid(row = ii,column=1)
+        self.entryIntegrator = Entry(self)
+        self.entryIntegrator.grid(row=ii,column=2,sticky=EW)
+        ii += 1
+
+        self.buttonFrame = Frame(self)
+        self.buttonFrame.grid(row = ii, column=0, columnspan = 3, sticky = EW)
+        
+        self.loadModelButton = Button(self.buttonFrame,text='Load Options',command=self.loadModelOptions)
+        self.loadModelButton.grid(row=0,column=0)#,sticky=EW)        
+        self.setModelButton = Button(self.buttonFrame,text='Save Options',command=self.setModelOptions)
+        self.setModelButton.grid(row=0,column=1)#,sticky=EW)        
+        self.setDefaultButton = Button(self.buttonFrame,text='Set Defaults',command=self.setDefaults)
+        self.setDefaultButton.grid(row=0,column=2)#,sticky=EW)
+        
+        padvalue = 10
+        for i in range(3):
+            self.columnconfigure(i,pad=padvalue)
+        for i in range(ii+1):
+            self.rowconfigure(i,pad=padvalue)
+            
+        #Fill comboboxes
+        
+        self.constraintsOptions = dict(name = [], params = [])
+        self.numbererOptions = dict(name = [], params = [])
+        self.systemOptions = dict(name = [], params = [])
+        self.testOptions = dict(name = [], params = [])
+        self.algorithmOptions = dict(name = [], params = [])
+        self.analysisOptions = dict(name = [], params = [])
+        self.integratorOptions = dict(name = [], params = [])
+        
+        fid = open('analysisOptions.db','r')
+        
+        for line in fid:
+            if line[0] == '#' or len(line) == 0:
+                pass
+            else:
+                spline = line.split()
+                
+                param = spline[2:]
+                #print spline
+                if spline[0] == 'constraints':
+                    self.constraintsOptions['name'].append(spline[1])
+                    self.constraintsOptions['params'].append(param)
+                if spline[0] == 'numberer':
+                    self.numbererOptions['name'].append(spline[1])
+                    self.numbererOptions['params'].append(param)
+                if spline[0] == 'system':
+                    self.systemOptions['name'].append(spline[1])
+                    self.systemOptions['params'].append(param)
+                if spline[0] == 'test':
+                    self.testOptions['name'].append(spline[1])
+                    self.testOptions['params'].append(param)
+                if spline[0] == 'algorithm':
+                    self.algorithmOptions['name'].append(spline[1])
+                    self.algorithmOptions['params'].append(param)
+                if spline[0] == 'integrator':
+                    self.integratorOptions['name'].append(spline[1])
+                    self.integratorOptions['params'].append(param)
+                if spline[0] == 'analysis':
+                    self.analysisOptions['name'].append(spline[1])
+                    self.analysisOptions['params'].append(param)
+                pass
+
+
+        fid.close()
+        
+        self.menuConstraints['values'] = tuple(self.constraintsOptions['name'])
+        self.menuNumberer['values'] = tuple(self.numbererOptions['name'])
+        self.menuSystem['values'] = tuple(self.systemOptions['name'])
+        self.menuTest['values'] = tuple(self.testOptions['name'])
+        self.menuAlgorithm['values'] = tuple(self.algorithmOptions['name'])
+        self.menuAnalysis['values'] = tuple(self.analysisOptions['name'])
+        self.menuIntegrator['values'] = tuple(self.integratorOptions['name'])
+        
+        self.menuConstraints.bind('<<ComboboxSelected>>',self.setConstraints)
+        self.menuNumberer.bind('<<ComboboxSelected>>',self.setNumberer)
+        self.menuSystem.bind('<<ComboboxSelected>>',self.setSystem)
+        self.menuTest.bind('<<ComboboxSelected>>',self.setTest)
+        self.menuAlgorithm.bind('<<ComboboxSelected>>',self.setAlgorithm)
+        self.menuAnalysis.bind('<<ComboboxSelected>>',self.setAnalysis)
+        self.menuIntegrator.bind('<<ComboboxSelected>>',self.setIntegrator)
+        pass
+    
+    
+    def setConstraints(self,event):
+        cmd = self.menuConstraints.get()
+        self.entryConstraints.delete(0,'end')
+        ind = self.constraintsOptions['name'].index(cmd)
+        params = self.constraintsOptions['params'][ind]
+        for par in params:
+            self.entryConstraints.insert('end',par)
+        pass
+    
+    def setNumberer(self,event):
+        cmd = self.menuNumberer.get()
+        self.entryNumberer.delete(0,'end')
+        ind = self.numbererOptions['name'].index(cmd)
+        params = self.numbererOptions['params'][ind]
+        for par in params:
+            self.entryNumberer.insert('end',par+' ')
+        pass
+    
+    def setSystem(self,event):
+        cmd = self.menuSystem.get()
+        self.entrySystem.delete(0,'end')
+        ind = self.systemOptions['name'].index(cmd)
+        params = self.systemOptions['params'][ind]
+        for par in params:
+            self.entrySystem.insert('end',par+' ')
+        pass
+    
+    def setTest(self,event):
+        cmd = self.menuTest.get()
+        self.entryTest.delete(0,'end')
+        ind = self.testOptions['name'].index(cmd)
+        params = self.testOptions['params'][ind]
+        for par in params:
+            self.entryTest.insert('end',par+' ')
+        pass
+    
+    def setAlgorithm(self,event):
+        cmd = self.menuAlgorithm.get()
+        self.entryAlgorithm.delete(0,'end')
+        ind = self.algorithmOptions['name'].index(cmd)
+        params = self.algorithmOptions['params'][ind]
+        for par in params:
+            self.entryAlgorithm.insert('end',par+' ')
+        pass
+    
+    def setIntegrator(self,event):
+        cmd = self.menuIntegrator.get()
+        self.entryIntegrator.delete(0,'end')
+        ind = self.integratorOptions['name'].index(cmd)
+        params = self.integratorOptions['params'][ind]
+        for par in params:
+            self.entryIntegrator.insert('end',par+' ')
+        pass
+    
+    def setAnalysis(self,event):
+        cmd = self.menuAnalysis.get()
+        self.entryAnalysis.delete(0,'end')
+        ind = self.analysisOptions['name'].index(cmd)
+        params = self.analysisOptions['params'][ind]
+        for par in params:
+            self.entryAnalysis.insert('end',par+' ')
+        pass
+    
+    def loadModelOptions(self,event=''):
+        self.menuConstraints.set(self.model.analysisOptions['constraints'].type)
+        self.entryConstraints.delete(0,'end')
+        self.entryConstraints.insert(0,self.model.analysisOptions['constraints'].parameters)
+        
+        self.menuNumberer.set(self.model.analysisOptions['numberer'].type)
+        self.entryNumberer.delete(0,'end')
+        self.entryNumberer.insert(0,self.model.analysisOptions['numberer'].parameters)
+        
+        self.menuSystem.set(self.model.analysisOptions['system'].type)
+        self.entrySystem.delete(0,'end')
+        self.entrySystem.insert(0,self.model.analysisOptions['system'].parameters)
+        
+        self.menuTest.set(self.model.analysisOptions['test'].type)
+        self.entryTest.delete(0,'end')
+        self.entryTest.insert(0,self.model.analysisOptions['test'].parameters)
+        
+        self.menuAlgorithm.set(self.model.analysisOptions['algorithm'].type)
+        self.entryAlgorithm.delete(0,'end')        
+        self.entryAlgorithm.insert(0,self.model.analysisOptions['algorithm'].parameters)
+        
+        self.menuAnalysis.set(self.model.analysisOptions['analysis'].type)
+        self.entryAnalysis.delete(0,'end')
+        self.entryAnalysis.insert(0,self.model.analysisOptions['analysis'].parameters)
+        
+        self.menuIntegrator.set(self.model.analysisOptions['integrator'].type)
+        self.entryIntegrator.delete(0,'end')
+        self.entryIntegrator.insert(0,self.model.analysisOptions['integrator'].parameters)
+        
+        pass
+    
+    def setModelOptions(self,event=''):
+        #Shout option prohibits shouting model changes, which takes a lot of time.
+        #It is delayed until the end of this method.
+        name = self.menuConstraints.get()
+        params = self.entryConstraints.get()
+        self.model.setAnalysisOption('constraints',name,params,shout=0)
+        
+        name = self.menuNumberer.get()
+        params = self.entryNumberer.get()
+        self.model.setAnalysisOption('numberer',name,params,shout=0)
+        
+        name = self.menuSystem.get()
+        params = self.entrySystem.get()
+        self.model.setAnalysisOption('system',name,params,shout=0)
+        
+        name = self.menuTest.get()
+        params = self.entryTest.get()
+        self.model.setAnalysisOption('integrator',name,params,shout=0)
+        
+        name = self.menuAlgorithm.get()
+        params = self.entryAlgorithm.get()
+        self.model.setAnalysisOption('algorithm',name,params,shout=0)
+        
+        name = self.menuAnalysis.get()
+        params = self.entryAnalysis.get()
+        self.model.setAnalysisOption('analysis',name,params,shout=0)
+        
+        name = self.menuIntegrator.get()
+        params = self.entryIntegrator.get()
+        self.model.setAnalysisOption('integrator',name,params, shout=1)
+   
+        pass
+    
+    def setDefaults(self,event=''):
+        self.model.setDefaultOptions()
+        self.loadModelOptions()
         pass
 
+    def updateWidgets(self,model):
+        self.model = model
+        self.loadModelOptions()
+        pass
 # ------------------------------------------------------------------------------
 # TAB: Analysis
 # ------------------------------------------------------------------------------
