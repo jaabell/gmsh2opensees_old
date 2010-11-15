@@ -1,9 +1,22 @@
 # -*- coding: utf-8 -*-
 # gmsh2opensees: A GUI application to transform .gmsh output files
 # into opensees commands and read ouput back into gmsh
+#Copyright (C) 2010 José Antonio Abell Mena
 #
-# 2010 - José Antonio Abell
+#This program is free software; you can redistribute it and/or
+#modify it under the terms of the GNU General Public License
+#as published by the Free Software Foundation; either version 2
+#of the License, or (at your option) any later version.
 #
+#This program is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#GNU General Public License for more details.
+#
+#You should have received a copy of the GNU General Public License
+#along with this program; if not, write to the Free Software
+#Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
 
 from libtabs import *
 from tkFileDialog import askopenfilename
@@ -128,6 +141,7 @@ class App:
         if self.model.success == 1:
             print 'Success in loading GMSH file!'
             self.activateGui()
+            self.checkModelFlags()
             self.model.subscribe(self)
         else:
             pass
@@ -192,6 +206,7 @@ class App:
         if self.model.flags['recorders'] == 1:
             pass
         if self.model.flags['analysis'] == 1:
+            self.model.writeAnalysis()
             pass
         if self.model.flags['elements'] == 1:
             pass
@@ -230,6 +245,10 @@ class App:
         self.tabSummary.updateWidgets(self.model)
         self.tabAssign.updateWidgets(self.model)
         self.tabMaterials.updateWidgets(self.model)
+        self.tabAnalysis.updateWidgets(self.model)
+        #self.tabPatterns.updateWidgets(self.model)
+        #self.tabRecord.updateWidgets(self.model)
+        #self.tabVariables.updateWidgets(self.model)
             
     def saveProject(self):
         fname = asksaveasfilename(parent=self.master,title="gmsh2OpenSEES: Seleccionar el archivo de destino", filetypes=[("gmsh2opensees Binary Model Representation","*.bmr")], initialfile=self.fname[:-4]+'.bmr')
@@ -349,6 +368,7 @@ class App:
     def updateWidgets(self):
         self.tabAssign.updateWidgets(self.model)
         self.tabMaterials.updateWidgets(self.model)
+        self.checkModelFlags()#self.model)
         pass
     
     def catchModelChange(self):
